@@ -1,0 +1,4 @@
+Data Size: (400, 9)
+Max Iterations: 1000
+Inner Loop Iterations: 10
+Convergence Sit Out: 100.0
