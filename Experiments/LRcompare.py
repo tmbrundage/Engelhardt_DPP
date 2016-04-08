@@ -146,11 +146,11 @@ for rep in range(repeat):
         DPP1_yhat = DPP1.predict(X_test)
         DPP1_mse = sum((y_test.T[0] - DPP1_yhat.T[0]) ** 2)
         DPP1_betaLoss = max(abs(DPP1.getBeta() - oracleBeta))[0]
-        with open(mseFile('DPP1','a') as f:
+        with open(mseFile('DPP1'),'a') as f:
             f.write("%15.10f    " % DPP1_mse)
-        with open(betaFile('DPP1','a') as f:
+        with open(betaFile('DPP1'),'a') as f:
             f.write("%15.10f    " % DPP1_betaLoss)
-        with open(lamFile('DPP1','a') as f:
+        with open(lamFile('DPP1'),'a') as f:
             f.write("%15.10f    " % optLam)
         print "MLE_DPP MSE: %f    BETA_LOSS: %f   OPT_LAM: %f" % (DPP1_mse, DPP1_betaLoss, optLam)
 
@@ -196,11 +196,11 @@ for rep in range(repeat):
         DPP2_yhat = DPP2.predict(X_test)
         DPP2_mse = sum((y_test.T[0] - DPP2_yhat.T[0]) ** 2)
         DPP2_betaLoss = max(abs(DPP2.getBeta() - oracleBeta))[0]
-        with open(mseFile('DPP2','a') as f:
+        with open(mseFile('DPP2'),'a') as f:
             f.write("%15.10f    " % DPP2_mse)
-        with open(betaFile('DPP2','a') as f:
+        with open(betaFile('DPP2'),'a') as f:
             f.write("%15.10f    " % DPP2_betaLoss)
-        with open(lamFile('DPP2','a') as f:
+        with open(lamFile('DPP2'),'a') as f:
             f.write("%15.10f    " % optLam)
         print "HP_DPP MSE: %f    BETA_LOSS: %f   OPT_LAM: %f" % (DPP2_mse, DPP2_betaLoss, optLam)
 
@@ -249,11 +249,11 @@ for rep in range(repeat):
         ridge_mse = sum((y_test - ridge_yhat) ** 2)
         ridge_beta = ridge.coef_.T
         ridge_betaLoss = max(abs(ridge_beta - oracleBeta))[0]
-        with open(mseFile('RIDGE','a') as f:
+        with open(mseFile('RIDGE'),'a') as f:
             f.write("%15.10f    " % ridge_mse)
-        with open(betaFile('RIDGE','a') as f:
+        with open(betaFile('RIDGE'),'a') as f:
             f.write("%15.10f    " % ridge_betaLoss)
-        with open(lamFile('RIDGE','a') as f:
+        with open(lamFile('RIDGE'),'a') as f:
             f.write("%15.10f    " % optLam)
         print "RIDGE MSE: %f    BETA_LOSS: %f   OPT_LAM: %f" % (ridge_mse, ridge_betaLoss, optLam)
 
@@ -283,11 +283,11 @@ for rep in range(repeat):
         lasso_mse = sum((y_test - lasso_yhat) ** 2)
         lasso_beta = np.array([lasso.coef_]).T
         lasso_betaLoss = max(abs(lasso_beta - oracleBeta))[0]
-        with open(mseFile('LASSO','a') as f:
+        with open(mseFile('LASSO'),'a') as f:
             f.write("%15.10f    " % lasso_mse)
-        with open(betaFile('LASSO','a') as f:
+        with open(betaFile('LASSO'),'a') as f:
             f.write("%15.10f    " % lasso_betaLoss)
-        with open(lamFile('LASSO','a') as f:
+        with open(lamFile('LASSO'),'a') as f:
             f.write("%15.10f    " % optLam)
         print "LASSO MSE: %f   BETA_LOSS: %f   OPT_LAM: %f" % (lasso_mse, lasso_betaLoss, optLam)
 
