@@ -23,7 +23,7 @@ import os
 import sys
 import time
 import datetime
-mainpath = "/Users/Ted/__Engelhardt/Code"
+mainpath = "/u/tobrund/Engelhardt_DPP"
 sys.path.append(os.path.abspath(mainpath))
 from Utils.BNV import BNV
 
