@@ -74,214 +74,275 @@ if not os.path.exists(outputDir):
     except OSError as exc:
         if exc.errno != errno.EEXIST:
             raise
-DPP1_log = "%sDPP1.txt" % outputDir
-DPP2_log = "%sDPP2.txt" % outputDir
-OLSR_log = "%sOLSR.txt" % outputDir
-RIDGE_log = "%sRIDGE.txt" % outputDir
-LASSO_log = "%sLASSO.txt" % outputDir
-ORACLE_log = "%sORACLE.txt" % outputDir
+
+def mseFile(expt):
+    return "%s%s_mse.txt" % (outputDir,expt)
+def betaFile(expt):
+    return "%s%s_beta.txt" % (outputDir,expt)
+def lamFile(expt):
+    return "%s%s_lam.txt" % (outputDir,expt)
+
 
 oracleBeta = np.array([[1.,-1.,0.,0.,0.,0.]]).T
 
-for n in ns:
-    ####################
-    ## Establish Data ##
-    ####################
+repeat = 1000
 
-    print "<<<<< N = %d >>>>>" % n
+for rep in range(repeat):
+    for n in ns:
+        ####################
+        ## Establish Data ##
+        ####################
 
-    X = KKData.genX(n=n)
-    p = X.shape[1]
-    y = KKData.genY(X)
+        print "<<<<< N = %d >>>>>" % n
 
-    X_test = KKData.genX(n=n_test)
-    y_test = KKData.genY(X_test)
+        X = KKData.genX(n=n)
+        p = X.shape[1]
+        y = KKData.genY(X)
 
-    val_size = int(0.1 * X.shape[0])
-    X_val = X[0:val_size,:]
-    y_val = y[0:val_size,:]
-    X_train = X[val_size:,:]
-    y_train = y[val_size:,:]
+        X_test = KKData.genX(n=n_test)
+        y_test = KKData.genY(X_test)
 
-    
-    ########################################
-    ## DPP:                               ##
-    ##  - Exponential Parameterization    ##
-    ##  - Full Pre-Marginalization        ##
-    ##  - Variational Hyperparameter MLE  ##     
-    ########################################
+        val_size = int(0.1 * X.shape[0])
+        X_val = X[0:val_size,:]
+        y_val = y[0:val_size,:]
+        X_train = X[val_size:,:]
+        y_train = y[val_size:,:]
 
-    # Network Variables:
-    DPP1_bnv = {}
-    DPP1_bnv['a0'] = MPM_a0.BN_a0(val = 525.0)
-    DPP1_bnv['b0'] = MPM_b0.BN_b0(val = 425.0)
-    DPP1_bnv['c'] = MPM_c.BN_c()
-    DPP1_bnv['theta'] = MPM_theta.BN_theta(param=p,prior='gaussian')
-    DPP1_bnv['gamma'] = MPM_gamma.BN_gamma(param=p)
+        
+        ########################################
+        ## DPP:                               ##
+        ##  - Exponential Parameterization    ##
+        ##  - Full Pre-Marginalization        ##
+        ##  - Variational Hyperparameter MLE  ##     
+        ########################################
 
-    lams = [1.0,5.,10.,50.,100.]#[0.0,1.0,2.0,5.0,10.,15.,25.,50.,75.,100.]
+        # Network Variables:
+        DPP1_bnv = {}
+        DPP1_bnv['a0'] = MPM_a0.BN_a0(val = 525.0)
+        DPP1_bnv['b0'] = MPM_b0.BN_b0(val = 425.0)
+        DPP1_bnv['c'] = MPM_c.BN_c()
+        DPP1_bnv['theta'] = MPM_theta.BN_theta(param=p,prior='gaussian')
+        DPP1_bnv['gamma'] = MPM_gamma.BN_gamma(param=p)
 
-    def Learn(lam):
+        lams = [1.0,5.,10.,50.,100.]#[0.0,1.0,2.0,5.0,10.,15.,25.,50.,75.,100.]
+
+        def Learn(lam):
+            DPP1_hp = {}
+            DPP1_hp['lam_gamma'] = lam
+            DPP1 = VI(X_train,y_train,DPP1_hp,DPP1_bnv,dir=loggingDirectory,logging=False,max_T=5e2,inner_T=3,verbose=False)
+            DPP1.variationalInference()
+            return DPP1
+
+        # print "DPP1>>>>>>>>>>>>"
+        optLam = ExperimentUtils.gridSearch1D(lams, Learn, Eval, MAX=False)
+
+        # Hyperparameters:
         DPP1_hp = {}
-        DPP1_hp['lam_gamma'] = lam
-        DPP1 = VI(X_train,y_train,DPP1_hp,DPP1_bnv,dir=loggingDirectory,logging=True,max_T=5e2,inner_T=3,verbose=False)
+        DPP1_hp['lam_gamma'] = optLam
+
+        DPP1 = VI(X,y,DPP1_hp,DPP1_bnv,dir=loggingDirectory,logging=False,max_T=2.5e3,inner_T=3,verbose=False)
         DPP1.variationalInference()
-        return DPP1
 
-    # print "DPP1>>>>>>>>>>>>"
-    optLam = ExperimentUtils.gridSearch1D(lams, Learn, Eval, MAX=False)
+        DPP1_yhat = DPP1.predict(X_test)
+        DPP1_mse = sum((y_test.T[0] - DPP1_yhat.T[0]) ** 2)
+        DPP1_betaLoss = max(abs(DPP1.getBeta() - oracleBeta))[0]
+        with open(mseFile('DPP1','a') as f:
+            f.write("%15.10f    " % DPP1_mse)
+        with open(betaFile('DPP1','a') as f:
+            f.write("%15.10f    " % DPP1_betaLoss)
+        with open(lamFile('DPP1','a') as f:
+            f.write("%15.10f    " % optLam)
+        print "MLE_DPP MSE: %f    BETA_LOSS: %f   OPT_LAM: %f" % (DPP1_mse, DPP1_betaLoss, optLam)
 
-    # Hyperparameters:
-    DPP1_hp = {}
-    DPP1_hp['lam_gamma'] = optLam
+      
 
-    DPP1 = VI(X,y,DPP1_hp,DPP1_bnv,dir=loggingDirectory,logging=True,max_T=2.5e3,inner_T=3,verbose=False)
-    DPP1.variationalInference()
+        ########################################
+        ## DPP:                               ##
+        ##  - Exponential Parameterization    ##
+        ##  - Partial Pre-Marginalization     ##
+        ##  - Stationary Hyperparameters      ##     
+        ########################################
 
-    DPP1_yhat = DPP1.predict(X_test)
-    DPP1_mse = sum((y_test.T[0] - DPP1_yhat.T[0]) ** 2)
-    DPP1_betaLoss = max(abs(DPP1.getBeta() - oracleBeta))[0]
-    with open(DPP1_log,'a') as f:
-        f.write("%15.10f    %15.10f    %15.10f\n" % (DPP1_mse, DPP1_betaLoss, optLam))
-    print "MLE_DPP MSE: %f   OPT_LAM: %f    BETA_LOSS: %f" % (DPP1_mse, optLam,DPP1_betaLoss)
+        # Hyperparameters:
+        DPP2_hp = {}
+        DPP2_hp['lam_gamma'] = 10.0
+        DPP2_hp['a0'] = 1.0
+        DPP2_hp['b0'] = 2.0
+        DPP2_hp['c']  = 2.0
 
-  
-
-    ########################################
-    ## DPP:                               ##
-    ##  - Exponential Parameterization    ##
-    ##  - Partial Pre-Marginalization     ##
-    ##  - Stationary Hyperparameters      ##     
-    ########################################
-
-    # Hyperparameters:
-    DPP2_hp = {}
-    DPP2_hp['lam_gamma'] = 10.0
-    DPP2_hp['a0'] = 1.0
-    DPP2_hp['b0'] = 2.0
-    DPP2_hp['c']  = 2.0
-
-    # Network Variables:
-    DPP2_bnv = {}
-    DPP2_bnv['theta'] = HP_theta.BN_theta(param=p,prior='gaussian')
-    DPP2_bnv['gamma'] = HP_gamma.BN_gamma(param=p)
+        # Network Variables:
+        DPP2_bnv = {}
+        DPP2_bnv['theta'] = HP_theta.BN_theta(param=p,prior='gaussian')
+        DPP2_bnv['gamma'] = HP_gamma.BN_gamma(param=p)
 
 
-    # lams = [0.0,1.0,2.0,5.0,10.,15.,25.,50.,75.,100.]
+        # lams = [0.0,1.0,2.0,5.0,10.,15.,25.,50.,75.,100.]
 
-    def Learn(lam):
-        DPP2_hp['lam_gamma'] = lam
-        DPP2 = VI(X_train,y_train,DPP2_hp,DPP2_bnv,dir=loggingDirectory,logging=True,max_T=5e2,inner_T=3,verbose=False)
+        def Learn(lam):
+            DPP2_hp['lam_gamma'] = lam
+            DPP2 = VI(X_train,y_train,DPP2_hp,DPP2_bnv,dir=loggingDirectory,logging=False,max_T=5e2,inner_T=3,verbose=False)
+            DPP2.variationalInference()
+            return DPP2
+
+        
+        optLam = ExperimentUtils.gridSearch1D(lams, Learn, Eval, MAX=False)
+
+        # Hyperparameters:
+        DPP2_hp['lam_gamma'] = optLam
+
+        DPP2 = VI(X,y,DPP2_hp,DPP2_bnv,dir=loggingDirectory,logging=False,max_T=2.5e3,inner_T=3,verbose=False)
         DPP2.variationalInference()
-        return DPP2
 
-    
-    optLam = ExperimentUtils.gridSearch1D(lams, Learn, Eval, MAX=False)
-
-    # Hyperparameters:
-    DPP2_hp['lam_gamma'] = optLam
-
-    DPP2 = VI(X,y,DPP2_hp,DPP2_bnv,dir=loggingDirectory,logging=True,max_T=2.5e3,inner_T=3,verbose=False)
-    DPP2.variationalInference()
-
-    DPP2_yhat = DPP2.predict(X_test)
-    DPP2_mse = sum((y_test.T[0] - DPP2_yhat.T[0]) ** 2)
-    DPP2_betaLoss = max(abs(DPP2.getBeta() - oracleBeta))[0]
-    with open(DPP2_log,'a') as f:
-        f.write("%15.10f    %15.10f    %15.10f\n" % (DPP2_mse, DPP2_betaLoss, optLam))
-    print "HP_DPP MSE: %f   OPT_LAM: %f    BETA_LOSS: %f" % (DPP2_mse, optLam, DPP2_betaLoss)
+        DPP2_yhat = DPP2.predict(X_test)
+        DPP2_mse = sum((y_test.T[0] - DPP2_yhat.T[0]) ** 2)
+        DPP2_betaLoss = max(abs(DPP2.getBeta() - oracleBeta))[0]
+        with open(mseFile('DPP2','a') as f:
+            f.write("%15.10f    " % DPP2_mse)
+        with open(betaFile('DPP2','a') as f:
+            f.write("%15.10f    " % DPP2_betaLoss)
+        with open(lamFile('DPP2','a') as f:
+            f.write("%15.10f    " % optLam)
+        print "HP_DPP MSE: %f    BETA_LOSS: %f   OPT_LAM: %f" % (DPP2_mse, DPP2_betaLoss, optLam)
 
 
-    ########################################
-    ## OLSR:                              ##
-    ##  - No Regularization               ##
-    ##  - Complete Marginalization        ##
-    ##  - Optimized hyperparameters       ##     
-    ########################################
+        ########################################
+        ## OLSR:                              ##
+        ##  - No Regularization               ##
+        ##  - Complete Marginalization        ##
+        ##  - Optimized hyperparameters       ##     
+        ########################################
 
-    OLSR_beta = np.linalg.inv(X.T.dot(X)).dot(X.T).dot(y)
-    OLSR_yhat = OLSR_beta.T.dot(X_test.T).T
-    OLSR_mse  = sum((y_test.T[0] - OLSR_yhat.T[0]) ** 2)
-    OLSR_betaLoss = max(abs(OLSR_beta - oracleBeta))[0]
-    with open(OLSR_log,'a') as f:
-        f.write("%15.10f    %15.10f\n" % (OLSR_mse, OLSR_betaLoss))
-    print "OLSR MSE: %f   BETA_LOSS: %f" % (OLSR_mse, OLSR_betaLoss)
+        OLSR_beta = np.linalg.inv(X.T.dot(X)).dot(X.T).dot(y)
+        OLSR_yhat = OLSR_beta.T.dot(X_test.T).T
+        OLSR_mse  = sum((y_test.T[0] - OLSR_yhat.T[0]) ** 2)
+        OLSR_betaLoss = max(abs(OLSR_beta - oracleBeta))[0]
+        with open(mseFile('OLSR'),'a') as f:
+            f.write("%15.10f    " % OLSR_mse)
+        with open(betaFile('OLSR'),'a') as f:
+            f.write("%15.10f    " % OLSR_betaLoss)
+        print "OLSR MSE: %f   BETA_LOSS: %f" % (OLSR_mse, OLSR_betaLoss)
 
 
 
-    ########################################
-    ## RIDGE:                             ##
-    ##  - l2 Regularization               ##
-    ##  - Complete Marginalization        ##
-    ##  - Optimized hyperparameters       ##     
-    ########################################
+        ########################################
+        ## RIDGE:                             ##
+        ##  - l2 Regularization               ##
+        ##  - Complete Marginalization        ##
+        ##  - Optimized hyperparameters       ##     
+        ########################################
 
-    ridgeLams = np.logspace(-5,6,23)
+        ridgeLams = np.logspace(-5,6,23)
 
-    def Learn(lam):
-        ridge = Ridge(alpha=lam,fit_intercept=False,copy_X=True)
-        ridge.fit(X_train,y_train)
-        return ridge
+        def Learn(lam):
+            ridge = Ridge(alpha=lam,fit_intercept=False,copy_X=True)
+            ridge.fit(X_train,y_train)
+            return ridge
 
-    
-    optLam = ExperimentUtils.gridSearch1D(ridgeLams, Learn, Eval, MAX=False)
+        
+        optLam = ExperimentUtils.gridSearch1D(ridgeLams, Learn, Eval, MAX=False)
 
-    
-    ridge = Ridge(alpha=optLam,fit_intercept=False,copy_X=True)
-    ridge.fit(X,y)
+        
+        ridge = Ridge(alpha=optLam,fit_intercept=False,copy_X=True)
+        ridge.fit(X,y)
 
-    ridge_yhat = ridge.predict(X_test)
-    ridge_mse = sum((y_test - ridge_yhat) ** 2)
-    ridge_beta = ridge.coef_.T
-    ridge_betaLoss = max(abs(ridge_beta - oracleBeta))[0]
-    with open(RIDGE_log,'a') as f:
-        f.write("%15.10f    %15.10f    %15.10f\n" % (ridge_mse, ridge_betaLoss, optLam))
-    print "RIDGE MSE: %f   OPT_LAM: %f    BETA_LOSS: %f" % (ridge_mse, optLam, ridge_betaLoss)
-
-
-    ########################################
-    ## LASSO:                             ##
-    ##  - l2 Regularization               ##
-    ##  - Complete Marginalization        ##
-    ##  - Optimized hyperparameters       ##     
-    ########################################
-
-    lassoLams = np.logspace(-5,6,23)
-
-    def Learn(lam):
-        lasso = Lasso(alpha=lam,fit_intercept=False,copy_X=True,max_iter=5.e3)
-        lasso.fit(X_train,y_train)
-        return lasso
-
-    
-    optLam = ExperimentUtils.gridSearch1D(lassoLams, Learn, Eval, MAX=False,verbose=False)
-
-    
-    lasso = Lasso(alpha=optLam,fit_intercept=False,copy_X=True,max_iter=2.5e5)
-    lasso.fit(X,y)
-
-    lasso_yhat = np.array([lasso.predict(X_test)]).T
-    lasso_mse = sum((y_test - lasso_yhat) ** 2)
-    lasso_beta = np.array([lasso.coef_]).T
-    lasso_betaLoss = max(abs(lasso_beta - oracleBeta))[0]
-    with open(LASSO_log,'a') as f:
-        f.write("%15.10f    %15.10f    %15.10f\n" % (lasso_mse, lasso_betaLoss, optLam))
-    print "LASSO MSE: %f   OPT_LAM: %f   BETA_LOSS: %f" % (lasso_mse, optLam, lasso_betaLoss)
+        ridge_yhat = ridge.predict(X_test)
+        ridge_mse = sum((y_test - ridge_yhat) ** 2)
+        ridge_beta = ridge.coef_.T
+        ridge_betaLoss = max(abs(ridge_beta - oracleBeta))[0]
+        with open(mseFile('RIDGE','a') as f:
+            f.write("%15.10f    " % ridge_mse)
+        with open(betaFile('RIDGE','a') as f:
+            f.write("%15.10f    " % ridge_betaLoss)
+        with open(lamFile('RIDGE','a') as f:
+            f.write("%15.10f    " % optLam)
+        print "RIDGE MSE: %f    BETA_LOSS: %f   OPT_LAM: %f" % (ridge_mse, ridge_betaLoss, optLam)
 
 
-    ############
-    ## Oracle ##
-    ############
+        ########################################
+        ## LASSO:                             ##
+        ##  - l2 Regularization               ##
+        ##  - Complete Marginalization        ##
+        ##  - Optimized hyperparameters       ##     
+        ########################################
 
-    gammaStar = np.array([[1,1,0,0,0,0]]).T
-    XgamStar = DPPutils.columnGammaZero(X,gammaStar)
-    Xreduc = DPPutils.gammaRM2D(XgamStar.T.dot(XgamStar),gammaStar)
-    invOracle = DPPutils.addback_RC(np.linalg.inv(Xreduc),gammaStar)
-    ORACLE_betaHAT = invOracle.dot(XgamStar.T).dot(y)
-    ORACLE_yhat = ORACLE_betaHAT.T.dot(X_test.T).T
-    ORACLE_mse  = sum((y_test.T[0] - ORACLE_yhat.T[0]) ** 2)
-    ORACLE_betaLoss = max(abs(ORACLE_betaHAT - oracleBeta))[0]
+        lassoLams = np.logspace(-5,6,23)
 
-    with open(ORACLE_log,'a') as f:
-        f.write("%15.10f    %15.10f\n" % (ORACLE_mse, ORACLE_betaLoss))
-    print "ORACLE MSE: %f   BETA_LOSS: %f" % (ORACLE_mse, ORACLE_betaLoss)
+        def Learn(lam):
+            lasso = Lasso(alpha=lam,fit_intercept=False,copy_X=True,max_iter=5.e3)
+            lasso.fit(X_train,y_train)
+            return lasso
+
+        
+        optLam = ExperimentUtils.gridSearch1D(lassoLams, Learn, Eval, MAX=False,verbose=False)
+
+        
+        lasso = Lasso(alpha=optLam,fit_intercept=False,copy_X=True,max_iter=2.5e5)
+        lasso.fit(X,y)
+
+        lasso_yhat = np.array([lasso.predict(X_test)]).T
+        lasso_mse = sum((y_test - lasso_yhat) ** 2)
+        lasso_beta = np.array([lasso.coef_]).T
+        lasso_betaLoss = max(abs(lasso_beta - oracleBeta))[0]
+        with open(mseFile('LASSO','a') as f:
+            f.write("%15.10f    " % lasso_mse)
+        with open(betaFile('LASSO','a') as f:
+            f.write("%15.10f    " % lasso_betaLoss)
+        with open(lamFile('LASSO','a') as f:
+            f.write("%15.10f    " % optLam)
+        print "LASSO MSE: %f   BETA_LOSS: %f   OPT_LAM: %f" % (lasso_mse, lasso_betaLoss, optLam)
+
+
+        ############
+        ## Oracle ##
+        ############
+
+        gammaStar = np.array([[1,1,0,0,0,0]]).T
+        XgamStar = DPPutils.columnGammaZero(X,gammaStar)
+        Xreduc = DPPutils.gammaRM2D(XgamStar.T.dot(XgamStar),gammaStar)
+        invOracle = DPPutils.addback_RC(np.linalg.inv(Xreduc),gammaStar)
+        ORACLE_betaHAT = invOracle.dot(XgamStar.T).dot(y)
+        ORACLE_yhat = ORACLE_betaHAT.T.dot(X_test.T).T
+        ORACLE_mse  = sum((y_test.T[0] - ORACLE_yhat.T[0]) ** 2)
+        ORACLE_betaLoss = max(abs(ORACLE_betaHAT - oracleBeta))[0]
+
+        with open(mseFile('ORACLE'),'a') as f:
+            f.write("%15.10f    " % ORACLE_mse)
+        with open(betaFile('ORACLE'),'a') as f:
+            f.write("%15.10f    " % ORACLE_betaLoss)
+        print "ORACLE MSE: %f   BETA_LOSS: %f" % (ORACLE_mse, ORACLE_betaLoss)
+
+    with open(mseFile('DPP1'),'a') as f:
+        f.write("\n")
+    with open(mseFile('DPP2'),'a') as f:
+        f.write("\n")
+    with open(mseFile('OLSR'),'a') as f:
+        f.write("\n")
+    with open(mseFile('RIDGE'),'a') as f:
+        f.write("\n")
+    with open(mseFile('LASSO'),'a') as f:
+        f.write("\n")
+    with open(mseFile('ORACLE'),'a') as f:
+        f.write("\n")
+
+    with open(betaFile('DPP1'),'a') as f:
+        f.write("\n")
+    with open(betaFile('DPP2'),'a') as f:
+        f.write("\n")
+    with open(betaFile('OLSR'),'a') as f:
+        f.write("\n")
+    with open(betaFile('RIDGE'),'a') as f:
+        f.write("\n")
+    with open(betaFile('LASSO'),'a') as f:
+        f.write("\n")
+    with open(betaFile('ORACLE'),'a') as f:
+        f.write("\n")
+
+    with open(lamFile('DPP1'),'a') as f:
+        f.write("\n")
+    with open(lamFile('DPP2'),'a') as f:
+        f.write("\n")
+    with open(lamFile('RIDGE'),'a') as f:
+        f.write("\n")
+    with open(lamFile('LASSO'),'a') as f:
+        f.write("\n")     
+
