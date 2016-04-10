@@ -1,0 +1,4 @@
+Logfile for gamma, non-iterative:
+
+>>>>>>>>>
+STEP 0 

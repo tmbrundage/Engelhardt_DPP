@@ -110,7 +110,7 @@ class BN_gamma(BNV):
         if not issubclass(type(state), VI):
             raise StateError('State must be given in terms of a VI object, not %s.' % type(state).__name__)
 
-        reqKeys = ['a0','b0']
+        reqKeys = ['a0','b0','c']
         self.check_BNVs(state,reqKeys)
         reqParams = ['lam_gamma']
         self.check_HPs(state,reqParams)
