@@ -73,10 +73,20 @@ class CollinearDataGenerator(object):
         # Standardize the reordering of features
         self.shuf = np.eye(self.p)
         shuffle(self.shuf)
-        print self.shuf
+        # print self.shuf
+
+        nonzero_requested = self.p - int(round(sparsity * self.p))
+        nonzero = min(self.independent, nonzero_requested)
+        if nonzero < nonzero_requested:
+            print "Warning: could not include %d nonzero coefficients with this level of colinearity." % nonzero_requested
+            print "Using %d nonzero instead." % nonzero
+
+        front = np.hstack((np.ones(nonzero), np.zeros(self.independent - nonzero)))
+        shuffle(front)
+        self.gamma = np.hstack((front, np.zeros(self.p - len(front)))).dot(self.shuf)
 
         # Get Beta*
-        self.betaStar = self.genBeta(self.p,sparsity)
+        self.betaStar = self.genBeta()
 
 
 
@@ -108,11 +118,11 @@ class CollinearDataGenerator(object):
     def getY(self,X):
 
         n = X.shape[0]
-        var = 0.81
+        var = 0.5
         noise_dist = stats.multivariate_normal(np.zeros(n),var*np.eye(n))
         eps = np.array([noise_dist.rvs()]).T
-        print "EPS:"
-        print eps
+        # print "EPS:"
+        # print eps
 
         y = X.dot(self.betaStar) + eps
 
@@ -141,8 +151,8 @@ class CollinearDataGenerator(object):
         # FOR NOW, FEATURES ARE ROWS
         data_dist = stats.multivariate_normal(np.zeros(n),np.eye(n))
         X = np.array([data_dist.rvs() for i in range(p)])
-        print "X_ORIGINAL"
-        print X
+        # print "X_ORIGINAL"
+        # print X
 
         # Make the present (independent) values in the (future) collinear feature
         # rows a noise factor
@@ -171,25 +181,21 @@ class CollinearDataGenerator(object):
     ### Last Updated: 4/10/16
     ###
 
-    @staticmethod
-    def genBeta(p,sparsity,**kwargs):
-        mu = np.zeros(p)
-        cov = 5 * np.eye(p)
+    def genBeta(self,**kwargs):
+        mu = np.zeros(self.p)
+        cov = 5 * np.eye(self.p)
 
         for k,v in kwargs.items():
             if k == 'cov':
-                cov = v * np.eye(p)
+                cov = v * np.eye(self.p)
             elif k == 'mu':
-                mu = v * np.ones(p)
+                mu = v * np.ones(self.p)
 
         data_dist = stats.multivariate_normal(mu,cov)
         beta = data_dist.rvs()
 
-        nonzero = max(1, p - int(round(sparsity * p)))
-        gamma = np.hstack((np.ones(nonzero),np.zeros(p - nonzero)))
-
-        sparse_beta = beta * gamma
-        shuffle(sparse_beta)
+        
+        sparse_beta = beta * self.gamma
         return np.array([sparse_beta]).T
 
     #########################################################################

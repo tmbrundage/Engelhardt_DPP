@@ -230,7 +230,9 @@ def greedyMapEstimate(p,L):
     while len(U) > 0:
         idx = -1
         test = gamma
-        for n,e in enumerate(U):
+        nextChecks = zip(range(len(U)),U)
+        np.random.shuffle(nextChecks)
+        for n,e in nextChecks:
             test[e,0] = 1.0
             L_test = L(test)
             # print "GAMMA SENT: %s " % repr(test)

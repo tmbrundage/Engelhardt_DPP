@@ -102,5 +102,3 @@ with open(compareFile,'w') as f:
 
     f.write('Oracle:\n')
     f.write('%s\n\n' % invOracle.dot(XgamStar.T).dot(y))
-
-

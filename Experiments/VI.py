@@ -117,6 +117,14 @@ class VI(object):
                 else:
                     with open(self.logfiles[key],'a') as f:
                         f.write('Logfile for %s, non-iterative:\n' % key)
+            # Log settings
+            settingsLog = '%s/%s.txt' % (self.dir, 'settings')
+            with open(settingsLog,'w') as f:
+                f.write('Data Size: %s\n' % repr(X.shape))
+                f.write('Max Iterations: %s\n'% repr(self.max_T))
+                f.write('Inner Loop Iterations: %s\n' % repr(self.inner_T))
+                f.write('Convergence Sit Out: %s\n' % repr(self.convergenceSitOut))
+
 
         if self.check:
             assert(type(X) == np.ndarray)
@@ -129,14 +137,7 @@ class VI(object):
 
         self.memoizer = Memoizer.Memoizer(self.X, self.y, check=self.check)
 
-        # Log settings
-        settingsLog = '%s/%s.txt' % (self.dir, 'settings')
-        with open(settingsLog,'w') as f:
-            f.write('Data Size: %s\n' % repr(X.shape))
-            f.write('Max Iterations: %s\n'% repr(self.max_T))
-            f.write('Inner Loop Iterations: %s\n' % repr(self.inner_T))
-            f.write('Convergence Sit Out: %s\n' % repr(self.convergenceSitOut))
-
+        
 
     #########################################################################
    
@@ -153,9 +154,10 @@ class VI(object):
             if self.verbose and step % 100 == 0:
                 print "We're on step: %d" % step
                 print self.bnv['gamma'].val_getter()
-                for fn in self.logfiles.values():
-                    with open(fn,'a') as f:
-                        f.write('\n>>>>>>>>>\nSTEP %d \n' % step)
+                if self.logging:
+                    for fn in self.logfiles.values():
+                        with open(fn,'a') as f:
+                            f.write('\n>>>>>>>>>\nSTEP %d \n' % step)
             converged = True
             for var in self.bnv.values():
                 if var.isiterative:
@@ -169,7 +171,7 @@ class VI(object):
                         converged = False
                         for t in range(self.inner_T):
                             var.update(self)
-                elif step > 50:
+                else:
                     var.update(self)
             if converged:
                 break

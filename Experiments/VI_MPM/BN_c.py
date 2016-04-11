@@ -56,7 +56,7 @@ class BN_c(BNV):
         return 5.0e-2
 
     def defaultValue(self):
-        return 1.0
+        return 10.0
 
     def likelihood(self, state):
         if not issubclass(type(state), VI):

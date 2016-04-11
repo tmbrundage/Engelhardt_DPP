@@ -117,8 +117,10 @@ class BNV(object):
         if self.check(state,newval):
             self.val = newval
         else:
-            print "newval: "
-            print newval
+            self.alpha *= 0.1
+        # else:
+            # print "newval: "
+            # print newval
             
         # else:
             # print "newval: "
