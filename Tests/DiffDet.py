@@ -69,7 +69,7 @@ def walk():
     current = getVal(theta0)
     theta = theta0
     for i in range(int(nSteps)):
-        current += delta.T.dot(H1(theta))
+        current += delta.T.dot(H(theta))
         theta += delta
 
     actual = getVal(thetaT)
