@@ -4,7 +4,7 @@
 ####
 ####  Code: Memoizer
 ####
-####  Last updated: 3/31/16
+####  Last updated: 4/13/16
 ####
 ####  Notes and disclaimers:
 ####    - Use only numpy.ndarray, not numpy.matrix to avoid any confusion
@@ -110,6 +110,49 @@ class Memoizer(object):
     #########################################################################
 
 
+
+    #########################################################################
+    ###
+    ### DET(S+Lam)
+    ###
+    ### Last Updated: 3/30/16
+    ###
+
+    def FinvSLam(self,gamma,c):
+        """
+            Params: >>>>> Gamma is the inclusion vector indexing S
+            Output: inv(S_gamma + cI)
+        """
+
+        if self.check:
+            # Verify the type of gamma and that it is the right size and shape
+            assert(type(gamma) == np.ndarray)
+            assert(gamma.shape == (self.p,1))
+
+        # If gamma is the empty set, determinant is just of I
+        if (sum(gamma)[0] == 0.0):
+            return c ** self.p
+
+        key = str(gamma)
+        
+        # If we have already computed the eigenvalues, return them from the dictionary
+        if self.S_QLAM.has_key(key):
+            eigVals = self.S_QLAM.get(key)['eigVals']
+            eigVecs = np.linalg.eigh(S_gamma)
+
+        # Otherwise, find the eigendecomposition and memoize
+        else:
+            S_gamma = DPPutils.gammaZero2D(self.S,gamma)
+            eigVals, eigVecs = np.linalg.eigh(S_gamma)
+            self.S_QLAM[key] = {'eigVals': eigVals, 'eigVecs': eigVecs}
+
+        inverse = eigVecs.dot(1./(eigVals + c) * np.eye(self.p)).dot(eigVecs.T)
+
+        return inverse
+        
+    #########################################################################
+
+
     #########################################################################
     ###
     ### GET_S_EIGENDECOMPOSITION 
@@ -146,7 +189,6 @@ class Memoizer(object):
             return (eigVals, eigVecs)
         
     #########################################################################
-
 
 
     #########################################################################
