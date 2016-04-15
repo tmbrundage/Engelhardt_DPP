@@ -25,6 +25,7 @@ mainpath = "/Users/Ted/__Engelhardt/Code"
 sys.path.append(os.path.abspath(mainpath))
 
 import numpy as np 
+import scipy.linalg as linalg
 import operator as operator
 import Utils.DPPutils as DPPutils
 
@@ -100,7 +101,7 @@ class Memoizer(object):
         # Otherwise, find the eigendecomposition and memoize
         else:
             S_gamma = DPPutils.gammaZero2D(self.S,gamma)
-            eigVals, eigVecs = np.linalg.eigh(S_gamma)
+            eigVals, eigVecs = linalg.eigh(S_gamma)
             self.S_QLAM[key] = {'eigVals': eigVals, 'eigVecs': eigVecs}
 
         det = reduce(operator.mul, map(lambda x: x + c, eigVals), 1.0)
@@ -138,12 +139,12 @@ class Memoizer(object):
         # If we have already computed the eigenvalues, return them from the dictionary
         if self.S_QLAM.has_key(key):
             eigVals = self.S_QLAM.get(key)['eigVals']
-            eigVecs = np.linalg.eigh(S_gamma)
+            eigVecs = self.S_QLAM.get(key)['eigVecs']
 
         # Otherwise, find the eigendecomposition and memoize
         else:
             S_gamma = DPPutils.gammaZero2D(self.S,gamma)
-            eigVals, eigVecs = np.linalg.eigh(S_gamma)
+            eigVals, eigVecs = linalg.eigh(S_gamma)
             self.S_QLAM[key] = {'eigVals': eigVals, 'eigVecs': eigVecs}
 
         inverse = eigVecs.dot(1./(eigVals + c) * np.eye(self.p)).dot(eigVecs.T)
@@ -184,7 +185,7 @@ class Memoizer(object):
         # Otherwise, find the eigendecomposition and memoize
         else:
             S_gamma = DPPutils.gammaZero2D(self.S,gamma)
-            eigVals, eigVecs = np.linalg.eigh(S_gamma)
+            eigVals, eigVecs = linalg.eigh(S_gamma)
             self.S_QLAM[key] = {'eigVals': eigVals, 'eigVecs': eigVecs}
             return (eigVals, eigVecs)
         
@@ -226,7 +227,7 @@ class Memoizer(object):
         # Otherwise, find the eigendecomposition and memoize
         else:
             S_gamma = DPPutils.gammaZero2D(self.S,gamma)
-            eigVals, eigVecs = np.linalg.eigh(S_gamma)
+            eigVals, eigVecs = linalg.eigh(S_gamma)
             self.S_QLAM[key] = {'eigVals': eigVals, 'eigVecs': eigVecs}
             
 
@@ -287,7 +288,7 @@ class Memoizer(object):
             # Otherwise, find the eigendecomposition and memoize
             else:
                 S_gamma = DPPutils.gammaZero2D(self.S,gamma)
-                eigVals, eigVecs = np.linalg.eigh(S_gamma)
+                eigVals, eigVecs = linalg.eigh(S_gamma)
                 self.S_QLAM[key_gamma] = {'eigVals': eigVals, 'eigVecs': eigVecs}
 
             # CHECK THAT THIS IS CORRECT

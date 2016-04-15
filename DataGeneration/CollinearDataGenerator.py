@@ -68,7 +68,7 @@ class CollinearDataGenerator(object):
 
         if self.collinear < collinear_requested:
             print "Warning: could not create requested proportion of pairwise covariant features."
-            print "Requested (independent, collinear): (%d, %d). Using: (%d, %d)" % (independent_requested, collinear_requested, independent, collinear)
+            print "Requested (independent, collinear): (%d, %d). Using: (%d, %d)" % (independent_requested, collinear_requested, self.independent, self.collinear)
 
         # Standardize the reordering of features
         self.shuf = np.eye(self.p)
