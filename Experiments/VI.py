@@ -30,6 +30,7 @@ from Utils.BNV import BNV
 import numpy as np
 import numpy.matlib as matlib
 import scipy.special as funcs
+import scipy.linalg as linalg
 import math as math
 import itertools as itertools
 import Utils.DPPutils as DPPutils
@@ -216,7 +217,7 @@ class VI(object):
             c = 1.0
         gamma = self.bnv['gamma'].val_getter()
         Xgam = DPPutils.columnGammaZero(self.X,gamma)
-        inv = np.linalg.inv(c * np.eye(p)+Xgam.T.dot(Xgam))
+        inv = linalg.inv(c * np.eye(p)+Xgam.T.dot(Xgam))
         beta = self.y.T.dot(Xgam).dot(inv).T
         return beta
 

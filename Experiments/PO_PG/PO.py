@@ -4,12 +4,13 @@
 ####
 ####  Code: Parameter Optimizer
 ####
-####  Last updated: 4/14/16
+####  Last updated: 4/16/16
 ####
 ####  Notes and disclaimers:
 ####    - I implement Theta as an instance variable, rather than a BNV
 ####          given the optimizations that are possible when L and gradL
 ####          are computed simulatneously. 
+####    - Gamma is selected via sampling
 ####    - Use only numpy.ndarray, not numpy.matrix to avoid any confusion
 ####    - If something is a column vector - MAKE IT A COLUMN VECTOR. Makes 
 ####          manipulation annoying, but it keeps matrix algebra logical. 
@@ -37,7 +38,6 @@ import scipy.linalg as linalg
 import math as math
 import random as random
 import itertools as itertools
-import DataGeneration.KojimaKomakiDataGen as KKData
 import DataGeneration.CollinearDataGenerator as CDG
 import Utils.ExperimentUtils as ExperimentUtils
 import Utils.DPPutils as DPPutils
@@ -127,23 +127,30 @@ class PO(object):
         lam_max = lam_min + 2.
         self.c = self.cRROpt(lam_min=lam_min,lam_max=lam_max)
 
-        print "c = %f" % self.c
+        # print "c = %f" % self.c
 
         diffProj = self.memoizer.FDifferenceProjection(np.ones((self.p,1)),self.c)
         self.var = diffProj / (self.n - 2.)
 
-        print "var = %f" % self.var
+        # print "var = %f" % self.var
 
 
         self.larsTopGamma = self.larsSet(p=0.75,cap=10)
-        print self.larsTopGamma
+        # print self.larsTopGamma
 
         self.theta = np.zeros((self.p,1))
         self.gradientAscentTheta()
 
-        print self.theta
+        # print self.theta
 
         self.gamma = self.gammaSamplingSelector()
+
+
+        # Set Coefficients
+        Xgam = DPPutils.columnGammaZero(self.X,self.gamma)
+        Minv = linalg.inv(self.c * np.eye(self.p) + Xgam.T.dot(Xgam))
+        self.beta = self.y.T.dot(Xgam).dot(Minv).T
+
 
     #########################################################################
 
@@ -228,8 +235,8 @@ class PO(object):
                 break
 
             if self.verbose and step % 100 == 0:
-                print "Theta Optimization, step: %d " % step
-                print "   %s" % repr(self.theta)
+                # print "Theta Optimization, step: %d " % step
+                # print "   %s" % repr(self.theta)
                 if self.logging:
                     with open(self.thetaFN,'a') as f:
                         f.write('\n>>>>>>>>>>>>>>\nSTEP%d \n' % step)\
@@ -308,7 +315,7 @@ class PO(object):
     ###
 
     def larsSet(self,p=.75,cap=10):
-        alphas, order, coefs = lars_path(X,y.T[0])
+        alphas, order, coefs = lars_path(self.X,self.y.T[0])
 
         magnitudes = np.array([abs(coefs[i,-1]) for i in order])
         total = sum(magnitudes)
@@ -578,6 +585,24 @@ class PO(object):
         
 
     #########################################################################
+
+
+
+    #########################################################################
+    ###
+    ### PREDICT
+    ###
+    ### Last Updated: 4/16/16
+    ###
+
+    def predict(self, X_test):
+        beta = self.beta
+        predictions = X_test.dot(beta)
+        return predictions
+
+
+    #########################################################################
+
 
 
 

@@ -83,7 +83,7 @@ class CollinearDataGenerator(object):
 
         front = np.hstack((np.ones(nonzero), np.zeros(self.independent - nonzero)))
         shuffle(front)
-        self.gamma = np.hstack((front, np.zeros(self.p - len(front)))).dot(self.shuf)
+        self.gamma = np.array([np.hstack((front, np.zeros(self.p - len(front)))).dot(self.shuf)]).T
 
         # Get Beta*
         self.betaStar = self.genBeta()
@@ -195,7 +195,7 @@ class CollinearDataGenerator(object):
         beta = data_dist.rvs()
 
         
-        sparse_beta = beta * self.gamma
+        sparse_beta = beta * self.gamma.T[0]
         return np.array([sparse_beta]).T
 
     #########################################################################
