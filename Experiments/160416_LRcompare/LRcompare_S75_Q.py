@@ -21,7 +21,7 @@
 
 import os
 import sys
-mainpath = "/Users/Ted/__Engelhardt/Engelhardt_DPP/"
+mainpath = "/u/tobrund/Engelhardt_DPP/"
 sys.path.append(os.path.abspath(mainpath))
 import time
 import datetime
