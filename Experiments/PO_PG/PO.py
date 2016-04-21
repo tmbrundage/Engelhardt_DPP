@@ -74,7 +74,7 @@ class PO(object):
         
         self.max_T = int(5e2)   # Number of draws of gamma
         self.minGamma = 10      # Minimum number of features to marginalize over
-        self.alpha = 1.e-2      # Learning rate on Theta Optimization
+        self.alpha = 1.      # Learning rate on Theta Optimization
         self.tau = 1.e-3        # Tolerance on Theta Optimization
         self.GA_max_T = int(5e2)# Number of iterations on Theta Optimization
         self.n_converge = 10    # Number of updates < tau to determine convergence
@@ -123,20 +123,24 @@ class PO(object):
 
 
         self.c = self.cRROpt()
-        lam_min = np.log10(self.c)-1.
-        lam_max = lam_min + 2.
-        self.c = self.cRROpt(lam_min=lam_min,lam_max=lam_max)
 
         # print "c = %f" % self.c
 
         diffProj = self.memoizer.FDifferenceProjection(np.ones((self.p,1)),self.c)
-        self.var = diffProj / (self.n - 2.)
+        self.var = 2. * diffProj / (self.n - 2.)
+        self.a0 = 1.
+        self.b0 = self.var / (1. + self.a0)
 
         # print "var = %f" % self.var
 
 
-        self.larsTopGamma = self.larsSet(p=0.75,cap=10)
+        # self.larsTopGamma = self.larsSet(p=0.75,cap=10)
+        self.larsTopGamma = self.larsSet()
+        self.larsCap = 10
         # print self.larsTopGamma
+
+
+        self.ignore = set()
 
         self.theta = np.zeros((self.p,1))
         self.gradientAscentTheta()
@@ -165,7 +169,9 @@ class PO(object):
 
     def gammaLikelihood(self, gamma):
         # No need to include normalization of p(gamma|theta)
-        pYGam = self.pYconditionalGammaX(gamma)
+        pYGam = self.ALTpYconditionalGammaX(gamma)
+        if pYGam == 0.:
+            return sys.float_info.min
         pGamTheta = self.memoizer.FdetL(gamma,self.theta)
         return np.log(pYGam * pGamTheta)
 
@@ -230,7 +236,7 @@ class PO(object):
         converging = 0
 
         for step in range(self.GA_max_T):
-
+            # print "STEP %d" % step
             if converging >= self.n_converge:
                 break
 
@@ -271,7 +277,7 @@ class PO(object):
     ###       validation set yet.
     ###
 
-    def cRROpt(self, n=20,lam_min=-5,lam_max=15):
+    def cRROpt(self, n=20,lam_min=-2,lam_max=3):
         # DOES IT MAKE A DIFFERENCE IF I DO THIS WITH ALL TRAINING DATA
         # OR DO I NEED TO FORCE A VALIDATION SET?
         # YES??
@@ -306,7 +312,7 @@ class PO(object):
     ###
     ### LARS_SET
     ###
-    ### Last Updated: 4/13/16
+    ### Last Updated: 4/20/16
     ###
     ### Note: Returns the first features that capture proportion p of the 
     ###       "correlation" in LARS. These are not necessarily the variables
@@ -314,21 +320,22 @@ class PO(object):
     ###       they were selected by LARS.
     ###
 
-    def larsSet(self,p=.75,cap=10):
+    def larsSet(self):#,p=.75,cap=10):
         alphas, order, coefs = lars_path(self.X,self.y.T[0])
+        return order
+        # magnitudes = np.array([abs(coefs[i,-1]) for i in order])
+        # total = sum(magnitudes)
 
-        magnitudes = np.array([abs(coefs[i,-1]) for i in order])
-        total = sum(magnitudes)
+        # partialSums = np.array(reduce(lambda a, x: a + [a[-1] + x], magnitudes[1:], [magnitudes[0]]))
 
-        partialSums = np.array(reduce(lambda a, x: a + [a[-1] + x], magnitudes[1:], [magnitudes[0]]))
+        # maxIdx = 1
+        # while maxIdx < len(partialSums) and partialSums[maxIdx - 1] < p:
+        #     maxIdx += 1
 
-        maxIdx = 1
-        while partialSums[maxIdx - 1] < p:
-            maxIdx += 1
+        # minReturn = min(self.minGamma, self.p)
 
-        minReturn = min(self.minGamma, self.p)
-
-        return order[0:max(minReturn, min(maxIdx, cap))]
+        # return order[0:max(minReturn, min(maxIdx, cap))]
+        
 
     #########################################################################
 
@@ -361,62 +368,46 @@ class PO(object):
             return gamma
 
         L = 0.
-        GradL = 0.
-        for i in range(len(self.larsTopGamma)):
-            for p in itertools.combinations(self.larsTopGamma,i+1):
+        GradL = np.zeros(theta.shape)
+        nothing = True
+        for i in range(self.larsCap):
+            for p in itertools.combinations(self.larsTopGamma[0:self.larsCap],i+1):
                 gamma = getGamma(p)
-                pYGam = self.pYconditionalGammaX(gamma)
+                if p in self.ignore:
+                    continue
+                else:
+                    nothing = False
+                logPYGam = self.logPYconditionalGammaX(gamma)
+                # pYGam = self.ALTpYconditionalGammaX(gamma)
+                
                 pGamTheta = self.memoizer.FdetL(gamma,theta)
-                # print logpYGam + logpGamTheta
-                # print np.exp(logpYGam + logpGamTheta)
-                k = pYGam * pGamTheta
-                # print k
+                # Compute coefficient in the logspace
+                k = np.exp(logPYGam + np.log(pGamTheta) + np.log(normalizer))
+                if k == 0.:
+                    # If it's too small, and p(y|gamma) was negligable on its own, 
+                    if np.exp(logPYGam) == 0.:
+                        self.ignore.add(p)
 
-                # pGamTheta = self.memoizer.FdetL(gamma,theta)
-                # k = pYGam * pGamTheta
                 L += k
                 GradL += k * (gamma - K1)
 
 
+        if nothing:
+            print "HOLD UP - EVERYTHING IS IGNORED"
+            self.larsCap += 1
+
         L *= normalizer
         GradL *= normalizer
 
-        
-        GradLogL = GradL / L
-        L = np.log(L)
+        if L == 0.:
+            GradLogL = GradL * 1e6
+            L = sys.float_info.min
+        else:
+            GradLogL = GradL / L
+            L = np.log(L)
 
         return L, GradLogL
 
-        """ RECURSIVE DEFINITION 
-        # def aux(accL, accGradL, gamma, set):
-        #     pYGam = self.pYconditionalGammaX(gamma,theta)
-        #     pGamTheta = self.memoizer.FdetL(gamma,theta)
-        #     k = pYGam * pGamTheta
-        #     L = accL + k
-        #     GradL = accGradL + k * (gamma - K1)
-        #     if len(set) == 1:
-        #         return accL, accGradL
-        #     else:
-        #         e = set[-1]
-        #         e_next = set[-2]
-        #         set_next = set[:-1]
-        #         gamma1 = gamma
-        #         gamma1[e_next:0] = 1.
-        #         # Call with next element set to 1.
-        #         aux(L, GradL, gamma1, set_next)
-        #         gamma0 = gamma1
-        #         gamma0[e:0] = 0.
-        #         # Call with this element reset to 0 and next element set to 1. 
-        #         aux(L, GradL, gamma0, set_next)
-
-        # gamma = np.zeros((self.p,1))
-        # # P(gamma = 0_p) = 0, since det(L_0) == 0
-        # accL = 0.
-        # accGradL = np.zeros((self.p,1))
-        # set = self.larsSet
-        # gamma[set[-1]:0] = 1.
-        # accL, accGradL = aux(accL, accGradL, gamma, set)
-        """
 
 
     #########################################################################
@@ -437,12 +428,69 @@ class PO(object):
         diffProj = self.memoizer.FDifferenceProjection(gamma,self.c)
         var = self.var
         n = self.n
+        a0 =self.a0
+        b0 = self.b0
+
+        pYcondGamma = 1. / (np.sqrt(det) * (b0 + diffProj) ** (a0 + n * 0.5))
         
-        pYcondGamma = np.exp(-1 * diffProj / (2. * var)) / np.sqrt(det)
+        # pYcondGamma = np.exp(-1 * diffProj / (2. * var)) / np.sqrt(det)
         # print pYcondGamma
+
+        # if pYcondGamma == 0.:
+            # print "Det = %s" % repr(det)
+            # print "diffProj = %s" % repr(diffProj)
+            # print "var = %s" % repr(var)
+            # print "n = %s" % repr(n)
         return pYcondGamma
 
     #########################################################################
+
+
+    #########################################################################
+    ###
+    ### LOG_P_Y_CONDITIONAL_GAMMA_X
+    ###
+    ### Last Updated: 4/20/16
+    ###
+    
+    def logPYconditionalGammaX(self,gamma):
+        # p(y|gamma)
+        det = self.memoizer.FdetSLam(gamma, self.c)
+        if det == 0.:
+            return np.finfo(float).eps
+        diffProj = self.memoizer.FDifferenceProjection(gamma,self.c)
+        var = self.var
+        n = self.n
+
+        logPYcondGamma = -1. * diffProj / var - 0.5 * np.log(det)
+        
+        return logPYcondGamma
+
+    #########################################################################
+
+
+    #########################################################################
+    ###
+    ### ALT_P_Y_CONDITIONAL_GAMMA_X
+    ###
+    ### Last Updated: 4/14/16
+    ###
+    
+    def ALTpYconditionalGammaX(self,gamma):
+        # p(y|gamma)
+        det = self.memoizer.FdetSLam(gamma, self.c)
+        if det == 0.:
+            return np.finfo(float).eps
+        diffProj = self.memoizer.FDifferenceProjection(gamma,self.c)
+        var = self.var
+        n = self.n
+
+        pYcondGamma = np.exp(-1. * diffProj / var) / np.sqrt(det) 
+        
+        return pYcondGamma
+
+    #########################################################################
+
 
 
     #########################################################################

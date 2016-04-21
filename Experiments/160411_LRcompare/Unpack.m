@@ -1,5 +1,5 @@
-folders = {'20160408_111739';'20160408_130007';'20160408_130949';'20160408_131216';'20160408_131421'};
-models = {'DPP1';'DPP2';'LASSO';'OLSR';'ORACLE';'RIDGE'};
+% folders = {'20160408_111739';'20160408_130007';'20160408_130949';'20160408_131216';'20160408_131421'};
+models = {'DPP_PO';'DPP_PO_greedy';'LASSO';'OLSR';'ORACLE';'RIDGE'};
 data   = {'mse';'beta'};
 formatString = '%f%f%f%f%f%f';
 output = cell(length(data),length(models));

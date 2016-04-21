@@ -87,7 +87,10 @@ class CollinearDataGenerator(object):
 
         # Get Beta*
         self.betaStar = self.genBeta()
-
+        X = self.getX(1000)
+        y = self.getY(X)
+        yscale = max(y) - min(y)
+        self.betaStar /= yscale
 
 
     #########################################################################
@@ -196,6 +199,8 @@ class CollinearDataGenerator(object):
 
         
         sparse_beta = beta * self.gamma.T[0]
+
+
         return np.array([sparse_beta]).T
 
     #########################################################################
