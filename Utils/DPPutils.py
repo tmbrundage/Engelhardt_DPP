@@ -4,7 +4,7 @@
 ####
 ####  Code: DPP Utilities
 ####
-####  Last updated: 3/19/16
+####  Last updated: 4/25/16
 ####
 ####  Notes and disclaimers:
 ####    - Use only numpy.ndarray, not numpy.matrix to avoid any confusion
@@ -202,6 +202,30 @@ def getK(L):
     return K
 
 #########################################################################
+
+
+
+#########################################################################
+###
+### MAKE_L
+###
+### Last updated: 4/25/16
+###
+###
+
+def makeL(S,theta):
+    assert(type(S) == np.ndarray)
+    assert(type(theta) == np.ndarray)
+    assert(S.shape == (theta.shape[0],theta.shape[0]))
+
+    expTheta = np.exp(0.5*self.theta)
+    coeffs = expTheta.dot(expTheta.T)
+    L = coeffs * self.S
+
+
+#########################################################################
+
+
 
 
 #########################################################################
