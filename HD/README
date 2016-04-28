@@ -1,0 +1,2 @@
+This code mirrors the rest of the code, but is specifically for use with high dimensional data.
+Namely, data where p >> n
