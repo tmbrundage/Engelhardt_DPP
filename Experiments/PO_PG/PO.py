@@ -74,7 +74,7 @@ class PO(object):
         
         self.max_T = int(5e2)   # Number of draws of gamma
         self.minGamma = 10      # Minimum number of features to marginalize over
-        self.alpha = 1.      # Learning rate on Theta Optimization
+        self.alpha = 1.         # Learning rate on Theta Optimization
         self.tau = 1.e-3        # Tolerance on Theta Optimization
         self.GA_max_T = int(5e2)# Number of iterations on Theta Optimization
         self.n_converge = 10    # Number of updates < tau to determine convergence
@@ -122,7 +122,7 @@ class PO(object):
         self.memoizer = Memoizer.Memoizer(self.X, self.y, check=self.check)
 
 
-        self.c = self.cRROpt()
+        self.c = ExperimentUtils.cRROpt(self.X,self.y)
 
         # print "c = %f" % self.c
 
@@ -171,7 +171,7 @@ class PO(object):
         # No need to include normalization of p(gamma|theta)
         pYGam = self.ALTpYconditionalGammaX(gamma)
         if pYGam == 0.:
-            return sys.float_info.min
+            return -1 * sys.float_info.max
         pGamTheta = self.memoizer.FdetL(gamma,self.theta)
         return np.log(pYGam * pGamTheta)
 
@@ -192,12 +192,10 @@ class PO(object):
 
     def gammaSamplingSelector(self):
         
-        # Build the L ensembel with self's theta. Find the eigendecomposition
-        expTheta = np.exp(0.5 * self.theta)
-        coeffs = expTheta.dot(expTheta.T)
-        L = coeffs * self.S
+        # Build the L ensemble with self's theta. Find the eigendecomposition
+        L = DPPutils.makeL(self.S,self.theta)
 
-        eigVals, eigVecs = np.linalg.eigh(L)
+        eigVals, eigVecs = linalg.eigh(L)
 
         maxGamma = np.zeros((self.p,1))
         maxLikelihood = self.gammaLikelihood(maxGamma)
@@ -206,7 +204,7 @@ class PO(object):
         tested.add(repr(maxGamma))
 
         for sample in range(self.max_T):
-            gammaTest = self.DPPSampler(eigVals, eigVecs)
+            gammaTest = ExperimentUtils.DPPSampler(eigVals, eigVecs)
             if repr(gammaTest) not in tested:
                 likelihood = self.gammaLikelihood(gammaTest)
                 if likelihood > maxLikelihood:
@@ -245,7 +243,7 @@ class PO(object):
                 # print "   %s" % repr(self.theta)
                 if self.logging:
                     with open(self.thetaFN,'a') as f:
-                        f.write('\n>>>>>>>>>>>>>>\nSTEP%d \n' % step)\
+                        f.write('\n>>>>>>>>>>>>>>\nSTEP%d \n' % step)
 
             L, gradL = self.theta_L_gradL_gamma(self.theta)
             self.theta += self.alpha * gradL
@@ -261,47 +259,6 @@ class PO(object):
             else: 
                 converging = 0
 
-
-
-    #########################################################################
-
-
-    #########################################################################
-    ###
-    ### C_RR_OPT
-    ###
-    ### Last Updated: 4/13/16
-    ###
-    ### Note: Returns the optimal value for the regularization parameter in
-    ###       ridge regression. Note - we're not splitting into a train and
-    ###       validation set yet.
-    ###
-
-    def cRROpt(self, n=20,lam_min=-2,lam_max=3):
-        # DOES IT MAKE A DIFFERENCE IF I DO THIS WITH ALL TRAINING DATA
-        # OR DO I NEED TO FORCE A VALIDATION SET?
-        # YES??
-        val_size = int(0.1 * self.X.shape[0])
-        X_val = self.X[0:val_size,:]
-        y_val = self.y[0:val_size,:]
-        X_train = self.X[val_size:,:]
-        y_train = self.y[val_size:,:]
-
-        def Eval(learned):
-            learned_yhat = X_val.dot(learned)
-            learned_mse = sum((y_val - learned_yhat) ** 2)
-            return learned_mse
-
-        def Learn(lam):
-            inverse = linalg.inv(X_train.T.dot(X_train) + lam * np.eye(self.p))
-            learned_beta = inverse.dot(X_train.T).dot(y_train)
-            return learned_beta
-
-        lams = np.logspace(lam_min,lam_max,n)
-
-        opt_c = ExperimentUtils.gridSearch1D(lams,Learn,Eval)
-
-        return opt_c
 
 
     #########################################################################
@@ -346,7 +303,7 @@ class PO(object):
     ###
     ### THETA_LIKELIHOOD_AND_GRADIENT
     ###
-    ### Last Updated: 4/13/16
+    ### Last Updated: 4/24/16
     ###
     ### Note: Returns the likelihood and its gradient for a given value of theta.
     ###
@@ -356,7 +313,7 @@ class PO(object):
         # Calculate all values that are constant for every term in the sum
         expTheta = np.exp(theta * 0.5) * np.eye(self.p)
         L = expTheta.dot(self.S).dot(expTheta) + np.eye(self.p)
-        eigVals, eigVecs = np.linalg.eigh(L)
+        eigVals, eigVecs = linalg.eigh(L)
         normalizer = reduce(lambda a, x: a * (x + 1.), eigVals, 1.)
         K = np.eye(self.p) - eigVecs.dot((1./(eigVals+1.)) * np.eye(self.p)).dot(eigVecs.T)
         K1 = K.dot(np.ones((self.p,1)))
@@ -382,7 +339,7 @@ class PO(object):
                 
                 pGamTheta = self.memoizer.FdetL(gamma,theta)
                 # Compute coefficient in the logspace
-                k = np.exp(logPYGam + np.log(pGamTheta) + np.log(normalizer))
+                k = np.exp(logPYGam + np.log(pGamTheta) - np.log(normalizer))
                 if k == 0.:
                     # If it's too small, and p(y|gamma) was negligable on its own, 
                     if np.exp(logPYGam) == 0.:
@@ -396,12 +353,10 @@ class PO(object):
             print "HOLD UP - EVERYTHING IS IGNORED"
             self.larsCap += 1
 
-        L *= normalizer
-        GradL *= normalizer
 
         if L == 0.:
             GradLogL = GradL * 1e6
-            L = sys.float_info.min
+            L = -1 * sys.float_info.max
         else:
             GradLogL = GradL / L
             L = np.log(L)
@@ -457,7 +412,7 @@ class PO(object):
         # p(y|gamma)
         det = self.memoizer.FdetSLam(gamma, self.c)
         if det == 0.:
-            return np.finfo(float).eps
+            return -1 * sys.float_info.max
         diffProj = self.memoizer.FDifferenceProjection(gamma,self.c)
         var = self.var
         n = self.n
@@ -493,146 +448,146 @@ class PO(object):
 
 
 
-    #########################################################################
-    ###
-    ### DPP_SAMPLER
-    ###
-    ### Last Updated: 4/14/16
-    ###
+    # #########################################################################
+    # ###
+    # ### DPP_SAMPLER
+    # ###
+    # ### Last Updated: 4/14/16
+    # ###
     
-    def DPPSampler(self, eigVals, eigVecs, indices = False):
+    # def DPPSampler(self, eigVals, eigVecs, indices = False):
 
-        # Build set J with elements i from [1, M] w.p. lam_i / (lam_i + 1)
-        J = self.eigSample(eigVals)
-        V = np.array([eigVecs[:, i] for i in J]).T
-        Y = []
+    #     # Build set J with elements i from [1, M] w.p. lam_i / (lam_i + 1)
+    #     J = self.eigSample(eigVals)
+    #     V = np.array([eigVecs[:, i] for i in J]).T
+    #     Y = []
 
-        # Select elements of Y, with probability as averaged sum of squares of
-        # ith component of eivenvectors in V. 
-        while len(V) > 0:
-            N = V.shape[0]
-            n = V.shape[1]
-            PDF = np.array([V[i, :].T.dot(V[i,:]) / float(n) for i in range(0,N)])
-            pDist = np.cumsum(PDF)
+    #     # Select elements of Y, with probability as averaged sum of squares of
+    #     # ith component of eivenvectors in V. 
+    #     while len(V) > 0:
+    #         N = V.shape[0]
+    #         n = V.shape[1]
+    #         PDF = np.array([V[i, :].T.dot(V[i,:]) / float(n) for i in range(0,N)])
+    #         pDist = np.cumsum(PDF)
 
-            r = random.random()
-            i = len([x for x in pDist if x < r])
-            Y.append(i)
-            V = self.orthogonalize(V, i)
-
-
-        # Return Y as a numpy array column vector
-        if indices:
-            return np.array([Y]).T
-        else:
-            Y_Lspace = np.zeros((self.p,1))
-            for i in range(0,len(Y)):
-                Y_Lspace[Y[i]] = 1.0
-            return Y_Lspace
-
-    #########################################################################
+    #         r = random.random()
+    #         i = len([x for x in pDist if x < r])
+    #         Y.append(i)
+    #         V = self.orthogonalize(V, i)
 
 
-    #########################################################################
-    ###
-    ### ORTHOGONALIZE
-    ###
-    ### Last updated: 11/03/15
-    ###
-    ### Note: Given a set of R basis vectors and i \in [0, N-1], compute a 
-    ###       new set of R-1 vectors that are orthogonal to e_i, but span the
-    ###       rest of the original space spanned by the R original vectors. 
-    ###
+    #     # Return Y as a numpy array column vector
+    #     if indices:
+    #         return np.array([Y]).T
+    #     else:
+    #         Y_Lspace = np.zeros((self.p,1))
+    #         for i in range(0,len(Y)):
+    #             Y_Lspace[Y[i]] = 1.0
+    #         return Y_Lspace
 
-    def orthogonalize(self, basis, i):
-        """
-         Params: basis is an orthonormal basis for some k-dimensional subspace
-                 of R^N. i indicates the dimension within N to which the 
-                 produced basis should be orthogonal. 
-         Result: a new set of basis vectors, orthogonal to e_i, but otherwise
-                 spanning the original space. 
-        """
+    # #########################################################################
 
-        # Check type of eigVals
-        assert type(basis) == np.ndarray
 
-        N = basis.shape[0]
-        d = basis.shape[1]
-        dimNull = N - d + 1 # dimension of null space of newBasis
+    # #########################################################################
+    # ###
+    # ### ORTHOGONALIZE
+    # ###
+    # ### Last updated: 11/03/15
+    # ###
+    # ### Note: Given a set of R basis vectors and i \in [0, N-1], compute a 
+    # ###       new set of R-1 vectors that are orthogonal to e_i, but span the
+    # ###       rest of the original space spanned by the R original vectors. 
+    # ###
 
-        if d == 1:
-            return np.array([])
+    # def orthogonalize(self, basis, i):
+    #     """
+    #      Params: basis is an orthonormal basis for some k-dimensional subspace
+    #              of R^N. i indicates the dimension within N to which the 
+    #              produced basis should be orthogonal. 
+    #      Result: a new set of basis vectors, orthogonal to e_i, but otherwise
+    #              spanning the original space. 
+    #     """
 
-        eps = 1.0e-8 # Don't want to be dividing by some very small number
-        # Get first column of basis with nonzero entry in ith row
-        j = 0 # column number
-        while j < d:
-            if abs(basis[i][j]) < eps:
-                j += 1
-            else:
-                break
+    #     # Check type of eigVals
+    #     assert type(basis) == np.ndarray
+
+    #     N = basis.shape[0]
+    #     d = basis.shape[1]
+    #     dimNull = N - d + 1 # dimension of null space of newBasis
+
+    #     if d == 1:
+    #         return np.array([])
+
+    #     eps = 1.0e-8 # Don't want to be dividing by some very small number
+    #     # Get first column of basis with nonzero entry in ith row
+    #     j = 0 # column number
+    #     while j < d:
+    #         if abs(basis[i][j]) < eps:
+    #             j += 1
+    #         else:
+    #             break
         
-        # kth column minus the (j) scaling column times ratio of ith element in kth to jth
-        newOrthogonal = np.array([basis[:,k] - basis[:,j] * (float(basis[i,k]) / basis [i,j]) for k in range(0,basis.shape[1]) if k != j]).T
-        newOrthonormal, R = linalg.qr(newOrthogonal)
+    #     # kth column minus the (j) scaling column times ratio of ith element in kth to jth
+    #     newOrthogonal = np.array([basis[:,k] - basis[:,j] * (float(basis[i,k]) / basis [i,j]) for k in range(0,basis.shape[1]) if k != j]).T
+    #     newOrthonormal, R = linalg.qr(newOrthogonal)
 
 
-        # Since we reduced the span of the basis, QR should have a larger nullspace (dim = n), given
-        # by n rows of zeros in R. In Python's implementation of QR decomposition, these should
-        # appear in the final n rows. Verify that this is the case. We verify this when we remove the
-        # corresponding n rightmost columns of Q
-        for nullCheck in range(0, dimNull):
-            assert sum(R[N - nullCheck - 1, :]) == 0
-        V = np.array(newOrthonormal[:,0:N - dimNull])
+    #     # Since we reduced the span of the basis, QR should have a larger nullspace (dim = n), given
+    #     # by n rows of zeros in R. In Python's implementation of QR decomposition, these should
+    #     # appear in the final n rows. Verify that this is the case. We verify this when we remove the
+    #     # corresponding n rightmost columns of Q
+    #     for nullCheck in range(0, dimNull):
+    #         assert sum(R[N - nullCheck - 1, :]) == 0
+    #     V = np.array(newOrthonormal[:,0:N - dimNull])
 
-        return V
-
-
-    #########################################################################
+    #     return V
 
 
-    #########################################################################
-    ###
-    ### EIG_SAMPLE
-    ###
-    ### Last updated: 11/02/15
-    ###
-    ### Note: Given a set of values k_i, we return a set of indices, each 
-    ###       index i is included in the set w.p. k_i / (k_i + 1)
-    ###
+    # #########################################################################
 
-    def eigSample(self, eigVals):
-        """
-         Params: eigVals is a set of eigenValues.   
-         Result: a set of indices, each index i is included in the set 
-                 w.p. lam_i / (lam_i + 1)
-        """
 
-        # Check type of eigVals
-        assert type(eigVals) == np.ndarray
+    # #########################################################################
+    # ###
+    # ### EIG_SAMPLE
+    # ###
+    # ### Last updated: 11/02/15
+    # ###
+    # ### Note: Given a set of values k_i, we return a set of indices, each 
+    # ###       index i is included in the set w.p. k_i / (k_i + 1)
+    # ###
 
-        M = len(eigVals)
+    # def eigSample(self, eigVals):
+    #     """
+    #      Params: eigVals is a set of eigenValues.   
+    #      Result: a set of indices, each index i is included in the set 
+    #              w.p. lam_i / (lam_i + 1)
+    #     """
 
-        # convert eigVals to probabilities
-        probs = np.array([lam / (1.0 + lam) for lam in eigVals])
+    #     # Check type of eigVals
+    #     assert type(eigVals) == np.ndarray
 
-        # Create inclusion vector
-        indices = np.array([i for i in range(0, M) if probs[i] > random.random()])
+    #     M = len(eigVals)
 
-        return indices
-        
-    # def testEigSample(N):
-    #     eigVals = np.array(random.rand(20,1))
-    #     freq = np.zeros(eigVals.shape)
-    #     for i in range(0,N):
-    #         indices = eigSample(eigVals)
-    #         for j in range(0, len(indices)):
-    #             freq[indices[j]] += 1.0/N
+    #     # convert eigVals to probabilities
     #     probs = np.array([lam / (1.0 + lam) for lam in eigVals])
-    #     print probs - freq
+
+    #     # Create inclusion vector
+    #     indices = np.array([i for i in range(0, M) if probs[i] > random.random()])
+
+    #     return indices
+        
+    # # def testEigSample(N):
+    # #     eigVals = np.array(random.rand(20,1))
+    # #     freq = np.zeros(eigVals.shape)
+    # #     for i in range(0,N):
+    # #         indices = eigSample(eigVals)
+    # #         for j in range(0, len(indices)):
+    # #             freq[indices[j]] += 1.0/N
+    # #     probs = np.array([lam / (1.0 + lam) for lam in eigVals])
+    # #     print probs - freq
         
 
-    #########################################################################
+    # #########################################################################
 
 
 

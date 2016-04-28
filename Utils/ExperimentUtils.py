@@ -47,7 +47,7 @@ from Experiments.VI import VI
 def gridSearch1D(grid, Learn, Eval, MAX = False, verbose = False):
 
     if MAX:
-        best = sys.float_info.min 
+        best = -1 * sys.float_info.max
     else:
         best = sys.float_info.max 
 
@@ -56,6 +56,8 @@ def gridSearch1D(grid, Learn, Eval, MAX = False, verbose = False):
     for var in grid:
         L = Learn(var)
         current = Eval(L)
+
+        # If Eval reaturns a value nested in arrays, get it out
         while type(current) == np.ndarray:
             current = current[0]
         if MAX:
@@ -109,8 +111,7 @@ def DPPSampler(eigVals, eigVecs, indices = False):
         return np.array([Y]).T
     else:
         Y_Lspace = np.zeros((len(eigVals),1))
-        for i in range(0,len(Y)):
-            Y_Lspace[Y[i]] = 1.0
+        Y_Lspace[Y] = 1.
         return Y_Lspace
 
 #########################################################################
@@ -240,7 +241,7 @@ def cRROpt(X, y, n=20,lam_min=-2,lam_max=3):
 
     def Eval(learned):
         learned_yhat = X_val.dot(learned)
-        learned_mse = sum((y_val - learned_yhat) ** 2)
+        learned_mse = sum((y_val - learned_yhat) ** 2)[0]
         return learned_mse
 
     def Learn(lam):
@@ -281,12 +282,12 @@ def initTheta(eigVals, kappa, expThetaGuess = 1.0, tolerance = 1.0e-12):
     assert (kappa >= 0)                # Verify cardinality is positive
 
     # Define the function and its first two derivatives for solving
-    f            = lambda x: sum([(x*lam) / (1.0 + x*lam) for lam in eigVals]) - kappa
-    fPrime       = lambda x: sum([lam / (1.0 + x*lam) ** 2 for lam in eigVals])
-    fDoublePrime = lambda x: sum([-2.0 * lam ** 2 / (1.0 + x * lam) ** 3 for lam in eigVals])
+    f            = lambda x: sum([(np.exp(x)*lam) / (1.0 + np.exp(x)*lam) for lam in eigVals]) - kappa
+    fPrime       = lambda x: sum([(np.exp(x)*lam) / (1.0 + np.exp(x)*lam) ** 2 for lam in eigVals])
+    fDoublePrime = lambda x: sum([(lam*np.exp(x)*(1-lam*np.exp(x))) / (1.0 + np.exp(x) * lam) ** 3 for lam in eigVals])
 
-    expTheta0 = optimize.newton(func = f, x0 = expThetaGuess, fprime = fPrime, fprime2 = fDoublePrime, tol = tolerance)
-    theta0 = np.log(expTheta0)
+    theta0 = optimize.newton(func = f, x0 = expThetaGuess, fprime = fPrime, fprime2 = fDoublePrime, tol = tolerance)
+    # theta0 = np.log(expTheta0)
 
     return theta0
 

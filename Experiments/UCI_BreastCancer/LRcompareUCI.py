@@ -24,7 +24,7 @@ import os
 import sys
 import time
 import datetime
-mainpath = "/Users/Ted/__Engelhardt/Engelhardt_DPP"
+mainpath = "/u/tobrund/Engelhardt_DPP"
 sys.path.append(os.path.abspath(mainpath))
 import numpy as np
 import pandas as pd 
@@ -38,6 +38,7 @@ import Utils.ExperimentUtils as ExperimentUtils
 
 
 
+T = int(sys.argv[1])
 
 DP = DataPrep.DataPrep()
 
@@ -53,7 +54,7 @@ def Eval(learned):
     learned_mse = sum((y_te - learned_yhat) ** 2)
     return learned_mse
 
-loggingDirectory = 'Logs/' #%s/' % datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d_%H%M%S')
+loggingDirectory = 'Logs/T_%s/' % repr(T) #%s/' % datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d_%H%M%S')
 outputDir = "%soutput/" % loggingDirectory
 if not os.path.exists(outputDir):
     try:
@@ -122,7 +123,7 @@ with open("%s%s" % (outputDir,fn_sparsity),'a') as f:
 ## DPP ##
 #########
 
-DPP_PO = PO.PO(DP.X_train,np.array([DP.y_train]).T,max_T = 500, GA_max_T = 200)
+DPP_PO = PO.PO(DP.X_train,np.array([DP.y_train]).T,max_T = 500, GA_max_T = T)
 DPP_PO_yhat = DPP_PO.predict(DP.X_test)
 DPP_PO_mse = sum((DP.y_test.T[0] - DPP_PO_yhat)**2.)
 print "DPP_PO MSE: %f    TOTAL:%f    DROPPED:%d" % (DPP_PO_mse, sum(DPP_PO.gamma)/float(X_tr.shape[1]),len(DPP_PO.ignore))

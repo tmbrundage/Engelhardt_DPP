@@ -100,7 +100,7 @@ class BN_gamma(BNV):
 
         L = inclusionSum + np.log(state.memoizer.FdetL(gamma,np.zeros((p,1)))) \
             - 0.5 * np.log(state.memoizer.FdetSLam(gamma,c)) \
-            - diffProj / (2.0 * var) \
+            - diffProj / var \
             - lam_gamma * sum(gamma)[0]
 
         return L

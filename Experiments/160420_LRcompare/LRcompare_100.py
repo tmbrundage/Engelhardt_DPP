@@ -51,7 +51,7 @@ T = 100
 ##################
 
 
-loggingDirectory = 'Logs_P%d_T%d/%s/' % (p,int(T),datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d_%H%M%S'))
+loggingDirectory = 'TEST_P%d_T%d/%s/' % (p,int(T),datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d_%H%M%S'))
 
 def Eval(learned):
     learned_yhat = learned.predict(X_val)

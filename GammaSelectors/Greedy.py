@@ -4,7 +4,7 @@
 ####
 ####  Code: Greedy Gamma Selector
 ####
-####  Last updated: 4/24/16
+####  Last updated: 4/25/16
 ####
 ####  Notes and disclaimers:
 ####    - Use only numpy.ndarray, not numpy.matrix to avoid any confusion
@@ -22,6 +22,7 @@
 import os
 import sys
 import time
+from copy import deepcopy as dc
 import datetime
 
 mainpath = "/Users/Ted/__Engelhardt/Engelhardt_DPP"
@@ -42,7 +43,42 @@ class Greedy(object):
     ###
     ### INITIALIZER
     ###
-    ### Last Updated: 4/24/16
+    ### Last Updated: 4/25/16
     ###
 
-    def __init__(self,thetaOptimizer,lam_gamma=0.0):
+    def __init__(self,TO,lam_gamma=0.0):
+        self.theta = dc(TO.theta)
+        self.var = dc(TO.var)
+        self.c = dc(TO.c)
+        self.p = dc(TO.p)
+        self.n = dc(TO.n)
+        self.lam_gamma = lam_gamma
+        self.memoizer = dc(TO.memoizer)
+
+        def likelihood(gamma):
+            inclusionSum = sum(gamma * self.theta)[0]
+            diffProj = self.memoizer.FDifferenceProjection(gamma,self.c)
+            L = inclusionSum + np.log(self.memoizer.FdetL(gamma,np.zeros((self.p,1)))) \
+                - 0.5 * np.log(self.memoizer.FdetSLam(gamma,self.c)) \
+                - diffProj / self.var \
+                - self.lam_gamma * sum(gamma)[0]
+            return L
+
+        L = lambda gam: likelihood(gam)
+
+        t0 = time.time()
+
+        self.gamma = DPPutils.greedyMapEstimate(self.p,L)
+
+        t1 = time.time()
+
+        self.time = t1 - t0
+
+        if TO.logging:
+            settingsLog = '%s/%s.txt' % (TO.dir, 'GreedySettings')
+            with open(settingsLog,'a') as f:
+                f.write('Lambda_gamma: %s\n' % repr(self.lam_gamma))
+                f.write('Time: %s\n' % repr(self.time))
+
+    #########################################################################
+

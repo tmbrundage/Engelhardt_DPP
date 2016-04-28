@@ -32,7 +32,6 @@ sys.path.append(os.path.abspath(mainpath))
 
 import numpy as np
 import scipy.linalg as linalg
-# from Experiments.PO_PG import PO
 import Utils.DPPutils as DPPutils
 
 
@@ -65,7 +64,7 @@ class PO_greedy(object):
             diffProj = PO.memoizer.FDifferenceProjection(gamma,self.c)
             L = inclusionSum + np.log(PO.memoizer.FdetL(gamma,np.zeros((self.p,1)))) \
                 - 0.5 * np.log(PO.memoizer.FdetSLam(gamma,self.c)) \
-                - diffProj / (2.0 * self.var) \
+                - diffProj / self.var \
                 - self.lam_gamma * sum(gamma)[0]
             return L
 

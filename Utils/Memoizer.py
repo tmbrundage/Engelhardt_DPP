@@ -64,7 +64,7 @@ class Memoizer(object):
         self.n, self.p = X.shape
 
         # Create dictionaries
-        self.differenceProjection = {} # 1/2 y.T (I - X_gam(X_gam^T X_gam + I)^-1 X_gam^T) y
+        self.differenceProjection = {} # 1/2 y.T (I - X_gam(X_gam^T X_gam + cI)^-1 X_gam^T) y
         self.S_QLAM = {} # Eigendecomposition of S
 
     #########################################################################
@@ -130,9 +130,9 @@ class Memoizer(object):
             assert(type(gamma) == np.ndarray)
             assert(gamma.shape == (self.p,1))
 
-        # If gamma is the empty set, determinant is just of I
+        # If gamma is the empty set, inverse is just of I
         if (sum(gamma)[0] == 0.0):
-            return c ** self.p
+            return np.eye(self.p) / c
 
         key = str(gamma)
         
@@ -247,7 +247,7 @@ class Memoizer(object):
 
     #########################################################################
     ###
-    ### 1/2 y.T (I - X_gam(X_gam^T X_gam + I)^-1 X_gam^T) y
+    ### 1/2 y.T (I - X_gam(X_gam^T X_gam + cI)^-1 X_gam^T) y
     ###
     ### Last Updated: 3/16/16
     ###
@@ -255,7 +255,7 @@ class Memoizer(object):
     def FDifferenceProjection(self,gamma,c):
         """
             Params: Gamma is the inclusion vector indexing S
-            Output: 1/2 y.T (X_gam(X_gam^T X_gam + cI)^-1 X_gam^T - I) y
+            Output: 1/2 y.T (I - X_gam(X_gam^T X_gam + cI)^-1 X_gam^T) y
         """
 
         # if self.check:

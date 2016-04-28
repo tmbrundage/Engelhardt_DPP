@@ -4,7 +4,7 @@
 ####
 ####  Code: DPP Utilities
 ####
-####  Last updated: 4/25/16
+####  Last updated: 4/26/16
 ####
 ####  Notes and disclaimers:
 ####    - Use only numpy.ndarray, not numpy.matrix to avoid any confusion
@@ -22,6 +22,7 @@
 import sys
 import numpy as np
 import numpy.matlib as matlib
+import scipy.linalg as linalg
 
 #########################################################################
 
@@ -72,7 +73,7 @@ def gammaZero2D(X,gamma):
     assert(gamma.shape == (X.shape[0],1))
     n = X.shape[0]
     Xcol = np.array([X[:,i] if gamma[i,0] else np.zeros((n,)) for i in range(n)])
-    Xgam = np.array([Xcol[:,i] if gamma[i,0] else np.zeros((n,)) for i in range(n)]).T
+    Xgam = np.array([Xcol[:,i] if gamma[i,0] else np.zeros((n,)) for i in range(n)])
     return Xgam
     
     
@@ -101,7 +102,7 @@ def gammaRM2D(X,gamma):
     assert(gamma.shape == (X.shape[0],1))
     n = X.shape[0]
     Xcol = np.array([X[:,i] for i in range(n) if gamma[i,0]])
-    Xgam = np.array([Xcol[:,i] for i in range(n) if gamma[i,0]]).T
+    Xgam = np.array([Xcol[:,i] for i in range(n) if gamma[i,0]])
     return Xgam
     
     
@@ -167,10 +168,9 @@ def getKDiag(L):
         Params: None - Assume exp(theta/2)X^TXexp(theta/2) form of L
         Output: Column Vector of diag(K)
     """
-
     assert(type(L) == np.ndarray)
     assert(L.shape[0] == L.shape[1])
-    eigVals, eigVecs = np.linalg.eigh(L)
+    eigVals, eigVecs = linalg.eigh(L)
     scale = matlib.repmat(eigVals / (eigVals + 1.0), len(eigVals),1)
 
     # Pointwise product here leaves A_ij = v_j(i)^2 * lam_j / (lam_j + 1)
@@ -198,7 +198,7 @@ def getK(L):
     assert(type(L) == np.ndarray)
     assert(L.shape[0] == L.shape[1])
     n = L.shape[0]
-    K = np.eye(n) - np.linalg.inv(L + np.eye(n))
+    K = np.eye(n) - linalg.inv(L + np.eye(n))
     return K
 
 #########################################################################
@@ -218,10 +218,10 @@ def makeL(S,theta):
     assert(type(theta) == np.ndarray)
     assert(S.shape == (theta.shape[0],theta.shape[0]))
 
-    expTheta = np.exp(0.5*self.theta)
+    expTheta = np.exp(0.5*theta)
     coeffs = expTheta.dot(expTheta.T)
-    L = coeffs * self.S
-
+    L = coeffs * S
+    return L
 
 #########################################################################
 
