@@ -30,6 +30,7 @@ import time
 import datetime
 import operator as operator
 from pathlib import Path
+import warnings
 
 mainpath = "/Users/Ted/__Engelhardt/Engelhardt_DPP"
 sys.path.append(os.path.abspath(mainpath))
@@ -157,7 +158,7 @@ class VL(object):
 
             self.max_T = int(1e2)   # Number of iterations
             self.kappa = int(self.p*0.1) # Expected cardinality of gamma
-            self.alpha = 1.e-2      # Step size
+            self.alpha = 1.e-4      # Step size
 
             self.check = True
             self.verbose = True
@@ -262,24 +263,31 @@ class VL(object):
             if self.verbose and step % 10 == 0:
                 print "Theta Optimization, step: %d " % step
                 # print "   %s" % repr(self.theta)
-                if self.logging:
-                    with open(self.thetaFN,'a') as f:
-                        f.write('\n>>>>>>>>>>>>>>\nSTEP%d \n' % step)
+                
 
             eigVals, eigVecs = linalg.eigh(L)
             gam = ExperimentUtils.DPPSampler(eigVals, eigVecs)
 
-            ghat = self.logPGammaConY(gam, L) * gam  # LINE 6
+            ghat = self.logPGammaConY(gam, L) * gam  # LINE 6 NORMALIZE THIS
             Chat = DPPutils.getK(L)                  # LINE 7
 
-            self.gs.append(ghat)
-            self.Cs.append(Chat)
+            try:
+                self.gs.append(ghat)
+                self.Cs.append(Chat)
 
-            g = (1. - self.alpha) * g + self.alpha * ghat
-            C = (1. - self.alpha) * C + self.alpha * Chat
+                gOld = g
+                COld = C 
+                g = (1. - self.alpha) * g + self.alpha * ghat
+                C = (1. - self.alpha) * C + self.alpha * Chat
 
-            self.theta = linalg.inv(C).dot(g)
-            L = DPPutils.makeL(self.S,self.theta)
+                self.theta = linalg.inv(C).dot(g)
+                L = DPPutils.makeL(self.S,self.theta)
+            except Warning: 
+                self.gs = self.gs[:-1]
+                self.Cs = self.Cs[:-1]
+                g = gOld
+                C = COld
+                pass
 
         # Use the last half of ghats and Chats to compute theta
         self.contTheta = self.theta # Saved for continued training
@@ -288,9 +296,13 @@ class VL(object):
         Cbar0 = np.zeros(self.Cs[0].shape)
         gbar0 = np.zeros(self.gs[0].shape)
         Navg  = len(self.gs) // 2
-        Cbar  = reduce(operator.add,self.Cs[Navg:],Cbar0)
-        gbar  = reduce(operator.add,self.gs[Navg:],gbar0)
+        Cbar  = reduce(operator.add,self.Cs[Navg:],Cbar0) 
+        gbar  = reduce(operator.add,self.gs[Navg:],gbar0) 
         self.theta = linalg.inv(Cbar).dot(gbar)
+        # self.theta = linalg.inv(C).dot(g)
+        if self.logging:
+            with open(self.thetaFN,'a') as f:
+                f.write('%s\n\n' % repr(self.theta))
 
 
     #########################################################################
@@ -312,7 +324,9 @@ class VL(object):
         var = self.var
         n = self.n
 
-        logPYcondGamma =  -1. * diffProj / var - 0.5 * np.log(det)
+        logPYcondGamma =  -1. * diffProj / var - 0.5 * np.log(det) \
+                          + self.p * 0.5 * np.log(self.c) \
+                          - self.n * 0.5 * np.log(2. * np.pi * self.var)
 
         logGamConTheta = np.log(self.memoizer.FdetL(gamma,self.theta))
 

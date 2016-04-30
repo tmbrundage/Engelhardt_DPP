@@ -2,7 +2,7 @@
 ####  Ted Brundage, M.S.E., Princeton University
 ####  Advisor: Barbara Engelhardt
 ####
-####  Code: Parameter Optimizer
+####  Code: Predictor
 ####
 ####  Last updated: 4/28/16
 ####

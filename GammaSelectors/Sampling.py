@@ -130,6 +130,10 @@ class Sampling(object):
         
         # Build the L ensemble with self's theta. Find the eigendecomposition
         L = DPPutils.makeL(self.S,self.theta)
+        # print ">>>>>>>>>> L"
+        # print self.S
+        # print ">>>>>>>>>> theta"
+        # print self.theta
 
         eigVals, eigVecs = linalg.eigh(L)
 
