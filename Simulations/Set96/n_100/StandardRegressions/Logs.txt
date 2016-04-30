@@ -1,0 +1,3 @@
+Ridge c: 1000000.0000000000
+Lasso c:    0.0050000000        alpha:    0.0433785019
+Lars optimized n_nonzero_coefs: 18 

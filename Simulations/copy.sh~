@@ -1,0 +1,16 @@
+#!/bin/sh
+
+for dir in */
+do
+    for nDir in $dir*/
+    do
+	sourceDir="~/__Engelhardt/FUCKINGGIT/$nDir"
+	folder="StandardRegressions/"
+	fullSourceDir="$sourceDir$folder"
+	localDir="$nDir"
+	#echo "$fullServerDir\n"
+	#echo "$localDir\n"
+	#echo "\n"
+	cp -rp $fullSourceDir $localDir
+    done
+done
