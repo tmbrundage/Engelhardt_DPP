@@ -1,0 +1,2 @@
+Number of samples: 500
+Time: 1.1938791275024414

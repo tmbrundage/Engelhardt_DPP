@@ -1,0 +1,4 @@
+Spin 0-24
+Soak 25-49
+Rinse 50-74
+Wash 75-99

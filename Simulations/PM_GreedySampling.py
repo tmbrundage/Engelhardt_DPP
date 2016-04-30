@@ -25,7 +25,7 @@ import time
 from copy import deepcopy as dc
 import datetime
 
-mainpath = "/Users/Ted/__Engelhardt/Engelhardt_DPP"
+mainpath = "/u/tobrund/Engelhardt_DPP"
 sys.path.append(os.path.abspath(mainpath))
 
 import numpy as np

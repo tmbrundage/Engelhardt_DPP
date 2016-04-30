@@ -1,0 +1,9 @@
+Data Size: (400, 40)
+Max Iterations: 500
+Kappa: -1
+Learning Rate: 1.0
+Num Ignored @ Start: 0
+Lars Cap @ Start: 10
+Time: 1211.5943739414215
+Num Ignored @ End: 0
+Lars Cap @ End: 10

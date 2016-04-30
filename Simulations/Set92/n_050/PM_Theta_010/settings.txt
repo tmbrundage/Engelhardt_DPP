@@ -1,0 +1,7 @@
+Data Size: (50, 40)
+Max Iterations: 10
+Kappa: -1
+Learning Rate: 1.0
+Num Ignored @ Start: 0
+Time: 46.58025908470154
+Num Ignored @ End: 0
