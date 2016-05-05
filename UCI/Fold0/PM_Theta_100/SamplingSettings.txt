@@ -1,0 +1,6 @@
+Number of samples: 500
+Time: 1.545072078704834
+Number of samples: 500
+Time: 1.3534018993377686
+Number of samples: 500
+Time: 1.4563710689544678

@@ -1,0 +1,36 @@
+Data Size: (178, 31)
+Max Iterations: 50
+Kappa: -1
+Learning Rate: 1.0
+Num Ignored @ Start: 0
+Lars Cap @ Start: 10
+Time: 100.09917116165161
+Num Ignored @ End: 0
+Lars Cap @ End: 10
+Data Size: (178, 31)
+Max Iterations: 50
+Kappa: -1
+Learning Rate: 1.0
+Num Ignored @ Start: 0
+Lars Cap @ Start: 10
+Time: 98.25195002555847
+Num Ignored @ End: 0
+Lars Cap @ End: 10
+Data Size: (178, 31)
+Max Iterations: 50
+Kappa: -1
+Learning Rate: 1.0
+Num Ignored @ Start: 0
+Lars Cap @ Start: 10
+Time: 188.59909105300903
+Num Ignored @ End: 0
+Lars Cap @ End: 10
+Data Size: (178, 31)
+Max Iterations: 50
+Kappa: -1
+Learning Rate: 1.0
+Num Ignored @ Start: 0
+Lars Cap @ Start: 10
+Time: 151.36677598953247
+Num Ignored @ End: 0
+Lars Cap @ End: 10

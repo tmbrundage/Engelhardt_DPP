@@ -1,0 +1,8 @@
+Lambda_gamma: 0.0
+Time: 0.5605759620666504
+Lambda_gamma: 0.0
+Time: 0.5226991176605225
+Lambda_gamma: 0.0
+Time: 1.0302889347076416
+Lambda_gamma: 0.0
+Time: 0.9059021472930908

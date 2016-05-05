@@ -1,0 +1,12 @@
+Data Size: (179, 31)
+Max Iterations: 10
+Kappa: -1
+Learning Rate: 1.0
+Num Ignored @ Start: 0
+Time: 34.57417297363281
+Num Ignored @ End: 0
+Data Size: (179, 31)
+Max Iterations: 10
+Kappa: -1
+Learning Rate: 1.0
+Num Ignored @ Start: 0
