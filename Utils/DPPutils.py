@@ -4,7 +4,7 @@
 ####
 ####  Code: DPP Utilities
 ####
-####  Last updated: 4/26/16
+####  Last updated: 5/4/16
 ####
 ####  Notes and disclaimers:
 ####    - Use only numpy.ndarray, not numpy.matrix to avoid any confusion
@@ -225,6 +225,24 @@ def makeL(S,theta):
 
 #########################################################################
 
+
+
+#########################################################################
+###
+### LDPP_MAKE_L
+###
+### Last updated: 5/4/16
+###
+###
+
+def LDPP_makeL(S,theta,w):
+    assert(type(S) == np.ndarray)
+    assert(theta >= 0.0)
+
+    L = np.exp(w) * (np.exp(-1 * theta) * S + (1.0 - np.exp(-1 *theta)) * np.eye(S.shape[0]))
+    return L
+
+#########################################################################
 
 
 

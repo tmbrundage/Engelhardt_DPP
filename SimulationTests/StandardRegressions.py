@@ -152,7 +152,7 @@ for i in range(setStart,setFinal):
         lars_gamma = np.zeros((X_tr.shape[1],1))
         lars_gamma[lars.active_] = 1.
         lars_predictor = PredictorWrapper.PredictorWrapper(lars_beta,lars_gamma,lars.predict)
-        dill.dump(lars_predictor,open('%sLARS_OPT.p' % (logDir,optKap),'wb'))
+        dill.dump(lars_predictor,open('%sLARS_OPT.p' % logDir,'wb'))
         with open(logFile,'a') as f:
             f.write('Lars optimized n_nonzero_coefs: %d \n' % optKap)
 

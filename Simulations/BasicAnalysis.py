@@ -46,7 +46,6 @@ setFinal = int(sys.argv[2])
 
 dataFolders = ['n_025','n_050','n_075','n_100','n_150','n_200','n_400']
 Tthetas = [10,20,50,100,200,500]
-Lthetas = [10,20]
 
 for i in range(setStart,setFinal):
     setDir = 'Set%02d/' % i
@@ -107,8 +106,7 @@ for i in range(setStart,setFinal):
     SRVM  = empty(measurements.keys(),(1,len(dataFolders)))
     PMG   = empty(measurements.keys(),(len(Tthetas),len(dataFolders)))
     PMS   = empty(measurements.keys(),(len(Tthetas),len(dataFolders)))
-    LPMG  = empty(measurements.keys(),(len(Lthetas),len(dataFolders)))
-    LPMS  = empty(measurements.keys(),(len(Lthetas),len(dataFolders)))
+
 
 
     for j,df in enumerate(dataFolders):
@@ -157,12 +155,6 @@ for i in range(setStart,setFinal):
 
             thetaS = dill.load(open('%sPM_Theta_%03d/PM_Theta%03d_Sampling.p' % (currentDir,T,T),'rb'))
             update(PMS,thetaS,k,j)
-        for k,T in enumerate(Lthetas):
-            LthetaG = dill.load(open('%sLDPP_PM_Theta_%03d/LDPP_PM_Theta%03d_Greedy.p' % (currentDir,T,T),'rb'))
-            update(LPMG,LthetaG,k,j)
-
-            LthetaS = dill.load(open('%sLDPP_PM_Theta_%03d/LDPP_PM_Theta%03d_Sampling.p' % (currentDir,T,T),'rb'))
-            update(LPMS,LthetaS,k,j)
 
 
     
@@ -180,8 +172,6 @@ saveAll(LARS,'Averages/lars')
 saveAll(SRVM,'Averages/srvm')
 saveAll(PMG,'Averages/PMG')
 saveAll(PMS,'Averages/PMS')
-saveAll(LPMG,'Averages/LPMG')
-saveAll(LPMS,'Averages/LPMS')
 
 
 

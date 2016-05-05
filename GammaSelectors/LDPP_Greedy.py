@@ -4,7 +4,7 @@
 ####
 ####  Code: Greedy Gamma Selector
 ####
-####  Last updated: 4/25/16
+####  Last updated: 5/4/16
 ####
 ####  Notes and disclaimers:
 ####    - Use only numpy.ndarray, not numpy.matrix to avoid any confusion
@@ -37,7 +37,7 @@ import Utils.DPPutils as DPPutils
 #########################################################################
 
 
-class Greedy(object):
+class LDPP_Greedy(object):
 
     #########################################################################
     ###
@@ -48,6 +48,7 @@ class Greedy(object):
 
     def __init__(self,TO,lam_gamma=0.0):
         self.theta = dc(TO.theta)
+        self.w = dc(TO.w)
         self.var = dc(TO.var)
         self.c = dc(TO.c)
         self.p = dc(TO.p)
@@ -57,7 +58,7 @@ class Greedy(object):
 
         def likelihood(gamma):
             diffProj = self.memoizer.FDifferenceProjection(gamma,self.c)
-            L = np.log(self.memoizer.FdetL(gamma,self.theta)) \
+            L = np.log(self.memoizer.LDPP_FdetL(gamma,self.theta,self.w)) \
                 - 0.5 * np.log(self.memoizer.FdetSLam(gamma,self.c)) \
                 - diffProj / self.var \
                 - self.lam_gamma * sum(gamma)[0]

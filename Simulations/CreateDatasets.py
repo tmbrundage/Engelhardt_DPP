@@ -35,13 +35,13 @@ import DataGeneration.CollinearDataGenerator as CDG
 
 
 N = 100
-
+myList = [125]
 p = 40
 s = 0.90
 ns = [25,50,75,100,150,200,400]
 n_test = 1000
 
-for i in xrange(N):
+for i in myList:#xrange(N):
     sys.stdout.write("Creating Set %d   \r" % (i))
     sys.stdout.flush()
     setDir = 'Set%02d/' % i

@@ -4,7 +4,7 @@
 ####
 ####  Code: Memoizer
 ####
-####  Last updated: 4/13/16
+####  Last updated: 4/30/16
 ####
 ####  Notes and disclaimers:
 ####    - Use only numpy.ndarray, not numpy.matrix to avoid any confusion
@@ -243,6 +243,68 @@ class Memoizer(object):
         return detL
 
     #########################################################################
+
+
+    #########################################################################
+    ###
+    ### LDPP_DET(L)
+    ###
+    ### Last Updated: 3/31/16
+    ###
+
+    def LDPP_FdetL(self,gamma,theta,w):
+        """
+            Params: Theta is the parameterization of L(theta,S)
+                    Gamma is the inclusion vector indexing L
+            Output: det(L_gamma)
+        """
+
+        if self.check:
+            # Verify the type, size, and shape of theta and gamma
+            assert(type(gamma) == np.ndarray)
+            assert(gamma.shape == (self.p,1))
+            assert(theta >= 0.0)
+
+        # If gamma represents the empty set, the determinant is defined as zero.
+        if (sum(gamma)[0] < 1.0):
+            return 1.0
+
+
+        key = str(gamma)
+        d = sum(gamma)[0]
+
+        # If we have already computed the eigenvalues, return them from the dictionary
+        if self.S_QLAM.has_key(key):
+            eigVals = self.S_QLAM.get(key)['eigVals']
+
+
+        # Otherwise, find the eigendecomposition and memoize
+        else:
+            S_gamma = DPPutils.gammaZero2D(self.S,gamma)
+            eigVals, eigVecs = linalg.eigh(S_gamma)
+            self.S_QLAM[key] = {'eigVals': eigVals, 'eigVecs': eigVecs}
+            
+        if theta == 1.0:
+            return reduce(operator.mul, eigVals[-1 * int(d):],1.0)
+
+
+        
+        coef = np.exp(d * (w - theta))
+        # coef = np.exp(d * (w - np.exp(theta)))
+        k = np.exp(theta) - 1.
+        # k = np.exp(np.exp(theta)) - 1.
+
+        detL = coef * reduce(lambda a, x: a * (x + k), eigVals[-1 * int(d):], 1.0)
+        # if detL< 1.0e-12:
+        #     print "Exponent: %s" % repr(exponent)
+        #     print "Gamma: %s" % repr(gamma)
+        #     print "theta: %s" % repr(theta)
+        #     print "eigVals: %s" % repr(eigVals)
+
+        return detL
+
+    #########################################################################
+
 
 
     #########################################################################

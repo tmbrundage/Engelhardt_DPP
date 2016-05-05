@@ -4,7 +4,7 @@
 ####
 ####  Code: UCI Breast Cancer Data Prepper
 ####
-####  Last updated: 4/30/16
+####  Last updated: 5/4/16
 ####
 ####  Notes and disclaimers:
 ####    - Use only numpy.ndarray, not numpy.matrix to avoid any confusion
@@ -26,13 +26,13 @@ mainpath = "/Users/Ted/__Engelhardt/Engelhardt_DPP"
 sys.path.append(os.path.abspath(mainpath))
 import numpy as np
 import pandas as pd 
-from sklearn.cross_validation import KFold
+from sklearn.cross_validation import train_test_split
 
 #########################################################################
 
 
 
-
+N = int(sys.argv[1])
 fn = 'wpbc.data'
 
 df = pd.read_csv(fn,header=None)
@@ -41,19 +41,15 @@ df = pd.read_csv(fn,header=None)
 # df.loc[df[1]=='N',2] *= -1.
 del df[34]
 
-k = 10
-kf = KFold(n=df.shape[0],n_folds=k,shuffle=True)
+for i in xrange(N):
+    X_train, X_test, y_train, y_test = train_test_split(
+        df.loc[:,3:], df.loc[:,2], test_size=0.1)
 #   (X,y) |--> df.loc[:,3:], df.loc[:,2]
-for i, (tr_idx, te_idx) in enumerate(kf):
+
     sys.stdout.write("Creating Set %d     \r" % i)
     sys.stdout.flush()
-    setDir = 'Fold%d/' % i
+    setDir = 'Set%03d/' % i
     os.makedirs(setDir)
-
-    X_train = df.loc[tr_idx,3:]
-    y_train = df.loc[tr_idx,2]
-    X_test  = df.loc[te_idx,3:]
-    y_test  = df.loc[te_idx,2]
 
     X_mu = X_train.mean()
     X_range = X_train.max() - X_train.min()
